@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { FollowsModule } from './follows/follows.module';
 
 
 import { PrismaModule } from './prisma/prisma.module';
@@ -21,6 +22,7 @@ import { LikesModule } from './likes/likes.module';
     PostsModule,
     CommentsModule,
     LikesModule,
+    FollowsModule,
   ],
 })
 export class AppModule {}

@@ -8,10 +8,13 @@ interface User {
   id: number;
   name: string;
   email: string;
+
   _count: {
     posts: number;
     comments: number;
     likes: number;
+    followers: number;
+    following: number;
   };
 }
 
@@ -20,10 +23,12 @@ interface Post {
   title: string;
   content: string;
   createdAt: string;
+
   author: {
     id: number;
     name: string;
   };
+
   _count: {
     comments: number;
     likes: number;
@@ -33,13 +38,31 @@ interface Post {
 export default function ProfilePage() {
   const params = useParams();
 
-  const userId = params.id;
+  const userId = Number(params.id);
+
+  // ==========================================
+  // USER STATE
+  // ==========================================
 
   const [user, setUser] =
     useState<User | null>(null);
 
   const [posts, setPosts] =
     useState<Post[]>([]);
+
+  // ==========================================
+  // FOLLOW STATE
+  // ==========================================
+
+  const [isFollowing, setIsFollowing] =
+    useState(false);
+
+  const [followLoading, setFollowLoading] =
+    useState(false);
+
+  // ==========================================
+  // PAGE STATE
+  // ==========================================
 
   const [loading, setLoading] =
     useState(true);
@@ -48,22 +71,55 @@ export default function ProfilePage() {
     useState('');
 
   // ==========================================
+  // CURRENT LOGGED-IN USER
+  // ==========================================
+
+  const [currentUserId, setCurrentUserId] =
+    useState<number | null>(null);
+
+  // ==========================================
+  // GET CURRENT USER FROM LOCAL STORAGE
+  // ==========================================
+
+  useEffect(() => {
+    const storedUser =
+      localStorage.getItem('user');
+
+    if (!storedUser) {
+      return;
+    }
+
+    try {
+      const parsedUser =
+        JSON.parse(storedUser);
+
+      setCurrentUserId(
+        Number(parsedUser.id),
+      );
+    } catch (error) {
+      console.error(
+        'Failed to parse logged-in user:',
+        error,
+      );
+    }
+  }, []);
+
+  // ==========================================
   // FETCH PROFILE
   // ==========================================
 
   useEffect(() => {
-    if (!userId) {
+    if (!userId || Number.isNaN(userId)) {
       return;
     }
 
     async function fetchProfile() {
       try {
         setLoading(true);
-
         setError('');
 
         // ======================================
-        // FETCH USER
+        // FETCH USER PROFILE
         // ======================================
 
         const userResponse =
@@ -71,16 +127,55 @@ export default function ProfilePage() {
             `http://localhost:3000/users/${userId}`,
           );
 
+        const userData =
+          await userResponse.json().catch(
+            () => null,
+          );
+
         if (!userResponse.ok) {
           throw new Error(
-            'Failed to fetch user profile',
+            userData?.message ||
+              'Failed to fetch user profile',
           );
         }
 
-        const userData: User =
-          await userResponse.json();
+        // ======================================
+        // NORMALIZE USER COUNT
+        // Prevent NaN / undefined
+        // ======================================
 
-        setUser(userData);
+        const normalizedUser: User = {
+          ...userData,
+
+          _count: {
+            posts:
+              Number(
+                userData?._count?.posts,
+              ) || 0,
+
+            comments:
+              Number(
+                userData?._count?.comments,
+              ) || 0,
+
+            likes:
+              Number(
+                userData?._count?.likes,
+              ) || 0,
+
+            followers:
+              Number(
+                userData?._count?.followers,
+              ) || 0,
+
+            following:
+              Number(
+                userData?._count?.following,
+              ) || 0,
+          },
+        };
+
+        setUser(normalizedUser);
 
         // ======================================
         // FETCH ALL POSTS
@@ -91,23 +186,26 @@ export default function ProfilePage() {
             'http://localhost:3000/posts',
           );
 
+        const postsData =
+          await postsResponse.json().catch(
+            () => null,
+          );
+
         if (!postsResponse.ok) {
           throw new Error(
-            'Failed to fetch posts',
+            postsData?.message ||
+              'Failed to fetch posts',
           );
         }
-
-        const postsData =
-          await postsResponse.json();
 
         // ======================================
         // HANDLE PAGINATED RESPONSE
         // ======================================
 
-        const allPosts =
+        const allPosts: Post[] =
           Array.isArray(postsData)
             ? postsData
-            : postsData.data || [];
+            : postsData?.data || [];
 
         // ======================================
         // FILTER USER POSTS
@@ -116,8 +214,7 @@ export default function ProfilePage() {
         const userPosts =
           allPosts.filter(
             (post: Post) =>
-              post.author?.id ===
-              Number(userId),
+              post.author?.id === userId,
           );
 
         setPosts(userPosts);
@@ -141,6 +238,210 @@ export default function ProfilePage() {
   }, [userId]);
 
   // ==========================================
+  // FOLLOW USER
+  // ==========================================
+
+  async function handleFollow() {
+    const token =
+      localStorage.getItem('accessToken');
+
+    if (!token) {
+      setError(
+        'Please login to follow this user.',
+      );
+
+      return;
+    }
+
+    setFollowLoading(true);
+    setError('');
+
+    try {
+      const response =
+        await fetch(
+          `http://localhost:3000/users/${userId}/follow`,
+          {
+            method: 'POST',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+      const data =
+        await response.json().catch(
+          () => null,
+        );
+
+      console.log(
+        'Follow API response:',
+        data,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            'Failed to follow user',
+        );
+      }
+
+      // ======================================
+      // UPDATE FOLLOW STATE
+      // ======================================
+
+      setIsFollowing(true);
+
+      // ======================================
+      // UPDATE FOLLOWER COUNT
+      // ======================================
+
+      setUser((previousUser) => {
+        if (!previousUser) {
+          return previousUser;
+        }
+
+        const currentFollowers =
+          Number(
+            previousUser._count
+              ?.followers,
+          ) || 0;
+
+        return {
+          ...previousUser,
+
+          _count: {
+            ...previousUser._count,
+
+            followers:
+              currentFollowers + 1,
+          },
+        };
+      });
+
+      console.log(
+        'Follow successful',
+      );
+    } catch (error) {
+      console.error(
+        'Follow error:',
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to follow user',
+      );
+    } finally {
+      setFollowLoading(false);
+    }
+  }
+
+  // ==========================================
+  // UNFOLLOW USER
+  // ==========================================
+
+  async function handleUnfollow() {
+    const token =
+      localStorage.getItem('accessToken');
+
+    if (!token) {
+      setError(
+        'Please login to unfollow this user.',
+      );
+
+      return;
+    }
+
+    setFollowLoading(true);
+    setError('');
+
+    try {
+      const response =
+        await fetch(
+          `http://localhost:3000/users/${userId}/follow`,
+          {
+            method: 'DELETE',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+      const data =
+        await response.json().catch(
+          () => null,
+        );
+
+      console.log(
+        'Unfollow API response:',
+        data,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            'Failed to unfollow user',
+        );
+      }
+
+      // ======================================
+      // UPDATE FOLLOW STATE
+      // ======================================
+
+      setIsFollowing(false);
+
+      // ======================================
+      // UPDATE FOLLOWER COUNT
+      // ======================================
+
+      setUser((previousUser) => {
+        if (!previousUser) {
+          return previousUser;
+        }
+
+        const currentFollowers =
+          Number(
+            previousUser._count
+              ?.followers,
+          ) || 0;
+
+        return {
+          ...previousUser,
+
+          _count: {
+            ...previousUser._count,
+
+            followers: Math.max(
+              0,
+              currentFollowers - 1,
+            ),
+          },
+        };
+      });
+
+      console.log(
+        'Unfollow successful',
+      );
+    } catch (error) {
+      console.error(
+        'Unfollow error:',
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to unfollow user',
+      );
+    } finally {
+      setFollowLoading(false);
+    }
+  }
+
+  // ==========================================
   // LOADING
   // ==========================================
 
@@ -162,7 +463,7 @@ export default function ProfilePage() {
   // ERROR
   // ==========================================
 
-  if (error) {
+  if (error && !user) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-4xl px-4 py-10">
@@ -212,14 +513,22 @@ export default function ProfilePage() {
     );
   }
 
+  // ==========================================
+  // CHECK OWN PROFILE
+  // ==========================================
+
+  const isOwnProfile =
+    currentUserId === user.id;
+
+  // ==========================================
+  // RENDER
+  // ==========================================
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ====================================== */}
-      {/* PROFILE HEADER */}
-      {/* ====================================== */}
-
       <main className="mx-auto max-w-4xl px-4 py-8">
-        {/* Back Button */}
+
+        {/* BACK BUTTON */}
 
         <Link
           href="/"
@@ -228,29 +537,55 @@ export default function ProfilePage() {
           ← Back to Feed
         </Link>
 
-        {/* ==================================== */}
         {/* PROFILE CARD */}
-        {/* ==================================== */}
 
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-          {/* Cover */}
+
+          {/* COVER */}
 
           <div className="h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
 
-          {/* Profile Info */}
+          {/* PROFILE INFO */}
 
           <div className="px-6 pb-6">
+
             <div className="-mt-12 flex flex-col items-start sm:flex-row sm:items-end sm:justify-between">
-              {/* Avatar */}
+
+              {/* AVATAR */}
 
               <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-600 shadow-md">
                 {user.name
                   .charAt(0)
                   .toUpperCase()}
               </div>
+
+              {/* FOLLOW BUTTON */}
+
+              {!isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={
+                    isFollowing
+                      ? handleUnfollow
+                      : handleFollow
+                  }
+                  disabled={followLoading}
+                  className={`mt-4 rounded-full px-6 py-2.5 text-sm font-semibold transition sm:mt-0 ${
+                    isFollowing
+                      ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {followLoading
+                    ? 'Please wait...'
+                    : isFollowing
+                      ? 'Following'
+                      : 'Follow'}
+                </button>
+              )}
             </div>
 
-            {/* User Details */}
+            {/* USER DETAILS */}
 
             <div className="mt-4">
               <h1 className="text-2xl font-bold text-gray-900">
@@ -262,16 +597,25 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            {/* ================================= */}
-            {/* USER STATS */}
-            {/* ================================= */}
+            {/* ERROR */}
 
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              {/* Posts */}
+            {error && (
+              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            {/* USER STATS */}
+
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+
+              {/* POSTS */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
-                  {user._count.posts}
+                  {Number(
+                    user._count.posts,
+                  ) || 0}
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
@@ -279,11 +623,41 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Comments */}
+              {/* FOLLOWERS */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
-                  {user._count.comments}
+                  {Number(
+                    user._count.followers,
+                  ) || 0}
+                </p>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Followers
+                </p>
+              </div>
+
+              {/* FOLLOWING */}
+
+              <div className="rounded-2xl bg-gray-50 p-4 text-center">
+                <p className="text-xl font-bold text-gray-900">
+                  {Number(
+                    user._count.following,
+                  ) || 0}
+                </p>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Following
+                </p>
+              </div>
+
+              {/* COMMENTS */}
+
+              <div className="rounded-2xl bg-gray-50 p-4 text-center">
+                <p className="text-xl font-bold text-gray-900">
+                  {Number(
+                    user._count.comments,
+                  ) || 0}
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
@@ -291,26 +665,28 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Likes */}
+              {/* LIKES */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
-                  {user._count.likes}
+                  {Number(
+                    user._count.likes,
+                  ) || 0}
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
                   Likes
                 </p>
               </div>
+
             </div>
           </div>
         </div>
 
-        {/* ====================================== */}
         {/* USER POSTS */}
-        {/* ====================================== */}
 
         <div className="mt-8">
+
           <h2 className="mb-5 text-xl font-bold text-gray-900">
             {user.name}'s Posts
           </h2>
@@ -322,20 +698,22 @@ export default function ProfilePage() {
               </p>
 
               <p className="mt-2 text-sm text-gray-500">
-                This user hasn't shared any
-                posts yet.
+                This user hasn't shared any posts yet.
               </p>
             </div>
           ) : (
             <div className="space-y-5">
+
               {posts.map((post) => (
                 <article
                   key={post.id}
                   className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
                 >
-                  {/* Post Header */}
+
+                  {/* POST HEADER */}
 
                   <div className="flex items-center gap-3">
+
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600">
                       {post.author.name
                         .charAt(0)
@@ -353,11 +731,13 @@ export default function ProfilePage() {
                         ).toLocaleDateString()}
                       </p>
                     </div>
+
                   </div>
 
-                  {/* Post Content */}
+                  {/* POST CONTENT */}
 
                   <div className="mt-5">
+
                     <h3 className="text-lg font-bold text-gray-900">
                       {post.title}
                     </h3>
@@ -365,26 +745,37 @@ export default function ProfilePage() {
                     <p className="mt-2 whitespace-pre-wrap text-gray-600">
                       {post.content}
                     </p>
+
                   </div>
 
-                  {/* Post Stats */}
+                  {/* POST STATS */}
 
                   <div className="mt-5 flex items-center gap-6 border-t border-gray-100 pt-4 text-sm text-gray-500">
+
                     <span>
-                      ❤️ {post._count.likes}{' '}
+                      ❤️{' '}
+                      {Number(
+                        post._count.likes,
+                      ) || 0}{' '}
                       Likes
                     </span>
 
                     <span>
                       💬{' '}
-                      {post._count.comments}{' '}
+                      {Number(
+                        post._count.comments,
+                      ) || 0}{' '}
                       Comments
                     </span>
+
                   </div>
+
                 </article>
               ))}
+
             </div>
           )}
+
         </div>
       </main>
     </div>

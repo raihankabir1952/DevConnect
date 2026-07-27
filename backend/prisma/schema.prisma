@@ -11,12 +11,22 @@ model User {
   name      String
   email     String   @unique
   password  String
+  profileImage String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  posts    Post[]
+  // User Posts
+  posts Post[]
+
+  // User Comments
   comments Comment[]
-  likes    Like[]
+
+  // User Likes
+  likes Like[]
+
+  // Following System
+  following Follow[] @relation("Following")
+  followers Follow[] @relation("Followers")
 }
 
 model Post {
@@ -26,11 +36,15 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  authorId  Int
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  // Post Author
+  authorId Int
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  comments  Comment[]
-  likes     Like[]
+  // Post Comments
+  comments Comment[]
+
+  // Post Likes
+  likes Like[]
 }
 
 model Comment {
@@ -38,22 +52,43 @@ model Comment {
   content   String
   createdAt DateTime @default(now())
 
-  userId    Int
-  postId    Int
+  // Comment User
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  // Comment Post
+  postId Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model Like {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
 
-  userId    Int
-  postId    Int
+  // Like User
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  // Like Post
+  postId Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
+  // One user can like a post only once
   @@unique([userId, postId])
+}
+
+model Follow {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  // User who follows
+  followerId Int
+  follower   User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+
+  // User being followed
+  followingId Int
+  following   User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate follow
+  @@unique([followerId, followingId])
 }
