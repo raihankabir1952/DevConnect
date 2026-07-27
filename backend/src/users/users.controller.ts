@@ -32,6 +32,7 @@ export class UsersController {
 
   // ==========================================
   // SEARCH USERS
+  // GET /users/search?name=Raihan
   // ==========================================
 
   @Get('search')
@@ -42,7 +43,7 @@ export class UsersController {
   }
 
   // ==========================================
-  // UPLOAD PROFILE IMAGE
+  // UPLOAD / CHANGE PROFILE IMAGE
   // PATCH /users/profile-image
   // ==========================================
 
@@ -62,7 +63,9 @@ export class UsersController {
           const uniqueName =
             `${Date.now()}-${Math.round(
               Math.random() * 1e9,
-            )}${extname(file.originalname)}`;
+            )}${extname(
+              file.originalname,
+            )}`;
 
           callback(
             null,
@@ -70,6 +73,11 @@ export class UsersController {
           );
         },
       }),
+
+      // ======================================
+      // FILE FILTER
+      // Only image files allowed
+      // ======================================
 
       fileFilter: (
         req,
@@ -95,6 +103,11 @@ export class UsersController {
         );
       },
 
+      // ======================================
+      // FILE SIZE LIMIT
+      // Maximum 5 MB
+      // ======================================
+
       limits: {
         fileSize:
           5 * 1024 * 1024,
@@ -108,11 +121,19 @@ export class UsersController {
     @Req()
     req: any,
   ) {
+    // ========================================
+    // CHECK FILE
+    // ========================================
+
     if (!file) {
       throw new BadRequestException(
         'Profile image is required',
       );
     }
+
+    // ========================================
+    // UPDATE PROFILE IMAGE
+    // ========================================
 
     return this.usersService.updateProfileImage(
       req.user.userId,
@@ -122,11 +143,15 @@ export class UsersController {
 
   // ==========================================
   // GET USER PROFILE
+  // GET /users/:id
   // ==========================================
 
   @Get(':id')
   findOne(
-    @Param('id', ParseIntPipe)
+    @Param(
+      'id',
+      ParseIntPipe,
+    )
     id: number,
   ) {
     return this.usersService.findOne(id);

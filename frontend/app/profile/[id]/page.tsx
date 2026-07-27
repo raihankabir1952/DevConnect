@@ -52,6 +52,9 @@ export default function ProfilePage() {
   const [user, setUser] =
     useState<User | null>(null);
 
+  const [uploading, setUploading] =
+  useState(false);
+
   const [posts, setPosts] =
     useState<Post[]>([]);
 
@@ -264,152 +267,182 @@ export default function ProfilePage() {
   // UPLOAD PROFILE IMAGE
   // ==========================================
 
-  async function handleProfileImageChange(
-    event: ChangeEvent<HTMLInputElement>,
+// ==========================================
+// CHANGE PROFILE IMAGE
+// ==========================================
+
+async function handleProfileImageChange(
+  event: ChangeEvent<HTMLInputElement>,
+) {
+  const file =
+    event.target.files?.[0];
+
+  // ========================================
+  // CHECK FILE
+  // ========================================
+
+  if (!file) {
+    return;
+  }
+
+  // ========================================
+  // CHECK LOGIN TOKEN
+  // ========================================
+
+  const token =
+    localStorage.getItem(
+      'accessToken',
+    );
+
+  if (!token) {
+    setError(
+      'Please login to change your profile picture.',
+    );
+
+    return;
+  }
+
+  // ========================================
+  // CHECK FILE TYPE
+  // ========================================
+
+  if (!file.type.startsWith('image/')) {
+    setError(
+      'Only image files are allowed.',
+    );
+
+    return;
+  }
+
+  // ========================================
+  // CHECK FILE SIZE
+  // Maximum 5 MB
+  // ========================================
+
+  if (
+    file.size >
+    5 * 1024 * 1024
   ) {
-    const file =
-      event.target.files?.[0];
+    setError(
+      'Image size must be less than 5 MB.',
+    );
 
-    if (!file) {
-      return;
-    }
+    return;
+  }
 
-    const token =
-      localStorage.getItem('accessToken');
+  try {
+    setUploading(true);
 
-    if (!token) {
-      setError(
-        'Please login to upload profile picture.',
-      );
-
-      return;
-    }
-
-    // ========================================
-    // VALIDATE FILE TYPE
-    // ========================================
-
-    if (!file.type.startsWith('image/')) {
-      setError(
-        'Please select a valid image file.',
-      );
-
-      return;
-    }
-
-    // ========================================
-    // VALIDATE FILE SIZE
-    // ========================================
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError(
-        'Image size must be less than 5MB.',
-      );
-
-      return;
-    }
-
-    setProfileImageLoading(true);
     setError('');
 
-    try {
-      const formData =
-        new FormData();
+    // ======================================
+    // CREATE FORM DATA
+    // ======================================
 
-      formData.append(
-        'profileImage',
-        file,
-      );
+    const formData =
+      new FormData();
 
-      // ========================================
-      // SEND IMAGE TO BACKEND
-      // ========================================
+    // IMPORTANT:
+    // Backend uses FileInterceptor('file')
+    // So field name MUST be "file"
 
-      const response =
-        await fetch(
-          'http://localhost:3000/users/profile-image',
-          {
-            method: 'PATCH',
+    formData.append(
+      'file',
+      file,
+    );
 
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+    // ======================================
+    // SEND REQUEST
+    // ======================================
 
-            body: formData,
+    const response =
+      await fetch(
+        'http://localhost:3000/users/profile-image',
+        {
+          method: 'PATCH',
+
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
           },
-        );
 
-      const data =
-        await response.json().catch(
-          () => null,
-        );
+          // Do NOT manually set
+          // Content-Type here.
+          // Browser will automatically
+          // set multipart/form-data boundary.
 
-      console.log(
-        'Profile image upload response:',
-        data,
+          body: formData,
+        },
       );
 
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-            'Failed to upload profile image',
-        );
-      }
+    // ======================================
+    // GET RESPONSE
+    // ======================================
 
-      // ========================================
-      // GET UPDATED IMAGE PATH
-      // ========================================
-
-      const updatedProfileImage =
-        data?.profileImage ||
-        data?.user?.profileImage ||
-        null;
-
-      if (updatedProfileImage) {
-        setUser(
-          (previousUser) => {
-            if (!previousUser) {
-              return previousUser;
-            }
-
-            return {
-              ...previousUser,
-
-              profileImage:
-                updatedProfileImage,
-            };
-          },
-        );
-      }
-
-      // ========================================
-      // SUCCESS MESSAGE
-      // ========================================
-
-      setError(
-        'Profile picture updated successfully!',
+    const data =
+      await response.json().catch(
+        () => null,
       );
 
-      // ========================================
-      // CLEAR FILE INPUT
-      // ========================================
+    console.log(
+      'Profile image upload response:',
+      data,
+    );
 
-      event.target.value = '';
-    } catch (error) {
-      console.error(
-        'Profile image upload error:',
-        error,
-      );
+    // ======================================
+    // HANDLE ERROR
+    // ======================================
 
-      setError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to upload profile image',
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+          'Failed to upload profile image',
       );
-    } finally {
-      setProfileImageLoading(false);
     }
+
+    // ======================================
+    // UPDATE PROFILE IMAGE IN UI
+    // ======================================
+
+    setUser(
+      (previousUser) => {
+        if (!previousUser) {
+          return previousUser;
+        }
+
+        return {
+          ...previousUser,
+
+          profileImage:
+            data.profileImage,
+        };
+      },
+    );
+
+    console.log(
+      'Profile image updated successfully',
+    );
+  } catch (error) {
+    console.error(
+      'Profile image upload error:',
+      error,
+    );
+
+    setError(
+      error instanceof Error
+        ? error.message
+        : 'Failed to upload profile image',
+    );
+  } finally {
+    setUploading(false);
+
+    // ======================================
+    // RESET FILE INPUT
+    // ======================================
+
+    event.target.value = '';
   }
+}
 
   // ==========================================
   // FOLLOW USER
