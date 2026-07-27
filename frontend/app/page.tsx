@@ -13,10 +13,12 @@ interface Post {
   createdAt: string;
   updatedAt: string;
   authorId: number;
+
   author: {
     id: number;
     name: string;
   };
+
   _count: {
     comments: number;
     likes: number;
@@ -25,6 +27,7 @@ interface Post {
 
 interface PostsResponse {
   data: Post[];
+
   pagination: {
     currentPage: number;
     limit: number;
@@ -36,22 +39,124 @@ interface PostsResponse {
 }
 
 export default function Home() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  // ==========================================
+  // POSTS STATE
+  // ==========================================
+
+  const [posts, setPosts] =
+    useState<Post[]>([]);
+
+  // ==========================================
+  // PAGE LOADING STATE
+  // ==========================================
 
   const [loading, setLoading] =
     useState(true);
 
-  const [error, setError] = useState('');
+  // ==========================================
+  // AUTHENTICATION STATE
+  // ==========================================
 
-  // Fetch all posts
+  const [authLoading, setAuthLoading] =
+    useState(true);
+
+  const [
+    isAuthenticated,
+    setIsAuthenticated,
+  ] = useState(false);
+
+  // ==========================================
+  // ERROR STATE
+  // ==========================================
+
+  const [error, setError] =
+    useState('');
+
+  // ==========================================
+  // CHECK AUTHENTICATION
+  // ==========================================
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem('accessToken');
+
+    // ========================================
+    // USER NOT LOGGED IN
+    // ========================================
+
+    if (!token) {
+      window.location.href = '/login';
+
+      return;
+    }
+
+    // ========================================
+    // USER IS LOGGED IN
+    // ========================================
+
+    setIsAuthenticated(true);
+
+    setAuthLoading(false);
+  }, []);
+
+  // ==========================================
+  // FETCH ALL POSTS
+  // ==========================================
+
   async function fetchPosts() {
     try {
       setLoading(true);
+
       setError('');
 
-      const response = await fetch(
-        'http://localhost:3000/posts',
-      );
+      const token =
+        localStorage.getItem('accessToken');
+
+      // ========================================
+      // CHECK TOKEN
+      // ========================================
+
+      if (!token) {
+        window.location.href = '/login';
+
+        return;
+      }
+
+      // ========================================
+      // FETCH POSTS
+      // ========================================
+
+      const response =
+        await fetch(
+          'http://localhost:3000/posts',
+          {
+            method: 'GET',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+      // ========================================
+      // HANDLE UNAUTHORIZED
+      // ========================================
+
+      if (response.status === 401) {
+        localStorage.removeItem(
+          'accessToken',
+        );
+
+        localStorage.removeItem('user');
+
+        window.location.href = '/login';
+
+        return;
+      }
+
+      // ========================================
+      // HANDLE OTHER ERRORS
+      // ========================================
 
       if (!response.ok) {
         throw new Error(
@@ -59,12 +164,19 @@ export default function Home() {
         );
       }
 
+      // ========================================
+      // RESPONSE DATA
+      // ========================================
+
       const data: PostsResponse =
         await response.json();
 
       setPosts(data.data);
     } catch (error) {
-      console.error(error);
+      console.error(
+        'Fetch posts error:',
+        error,
+      );
 
       setError(
         error instanceof Error
@@ -76,18 +188,71 @@ export default function Home() {
     }
   }
 
-  // Fetch posts when page loads
+  // ==========================================
+  // FETCH POSTS AFTER AUTH CHECK
+  // ==========================================
+
   useEffect(() => {
+    // Authentication check এখনো শেষ হয়নি
+    if (authLoading) {
+      return;
+    }
+
+    // User authenticated না হলে
+    if (!isAuthenticated) {
+      return;
+    }
+
+    // User authenticated হলে posts fetch
     fetchPosts();
-  }, []);
+  }, [
+    authLoading,
+    isAuthenticated,
+  ]);
+
+  // ==========================================
+  // AUTHENTICATION LOADING
+  // ==========================================
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-500">
+            Checking authentication...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // NOT AUTHENTICATED
+  // ==========================================
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // ==========================================
+  // MAIN UI
+  // ==========================================
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
+
+      {/* ====================================== */}
+      {/* NAVBAR */}
+      {/* ====================================== */}
+
       <Navbar />
 
       <main className="mx-auto max-w-2xl px-4 py-8">
-        {/* Page Header */}
+
+        {/* ==================================== */}
+        {/* PAGE HEADER */}
+        {/* ==================================== */}
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Developer Feed
@@ -99,32 +264,49 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Create Post */}
+        {/* ==================================== */}
+        {/* CREATE POST */}
+        {/* ==================================== */}
+
         <CreatePost
           onPostCreated={fetchPosts}
         />
 
-        {/* Posts */}
+        {/* ==================================== */}
+        {/* POSTS */}
+        {/* ==================================== */}
+
         <div className="space-y-5">
-          {/* Loading */}
+
+          {/* ================================== */}
+          {/* LOADING */}
+          {/* ================================== */}
+
           {loading && (
             <div className="py-10 text-center text-gray-500">
               Loading posts...
             </div>
           )}
 
-          {/* Error */}
+          {/* ================================== */}
+          {/* ERROR */}
+          {/* ================================== */}
+
           {error && (
             <div className="rounded-xl bg-red-50 p-4 text-center text-red-600">
               {error}
             </div>
           )}
 
-          {/* Empty State */}
+          {/* ================================== */}
+          {/* EMPTY STATE */}
+          {/* ================================== */}
+
           {!loading &&
             !error &&
             posts.length === 0 && (
               <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+
                 <h2 className="text-lg font-semibold text-gray-900">
                   No posts yet
                 </h2>
@@ -133,10 +315,14 @@ export default function Home() {
                   Be the first developer to
                   share something!
                 </p>
+
               </div>
             )}
 
-          {/* Post List */}
+          {/* ================================== */}
+          {/* POST LIST */}
+          {/* ================================== */}
+
           {!loading &&
             !error &&
             posts.map((post) => (
@@ -144,12 +330,18 @@ export default function Home() {
                 key={post.id}
                 post={post}
 
-                // After post update
+                // ==============================
+                // AFTER POST UPDATE
+                // ==============================
+
                 onPostUpdated={() => {
                   fetchPosts();
                 }}
 
-                // After post delete
+                // ==============================
+                // AFTER POST DELETE
+                // ==============================
+
                 onPostDeleted={(postId) => {
                   setPosts(
                     (currentPosts) =>
@@ -162,6 +354,7 @@ export default function Home() {
                 }}
               />
             ))}
+
         </div>
       </main>
     </div>
