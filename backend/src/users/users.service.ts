@@ -17,25 +17,25 @@ export class UsersService {
   // ==========================================
 
   async searchUsers(name: string) {
-  return this.prisma.user.findMany({
-    where: {
-      name: {
-        contains: name,
-        mode: 'insensitive',
+    return this.prisma.user.findMany({
+      where: {
+        name: {
+          contains: name,
+          mode: 'insensitive',
+        },
       },
-    },
 
-    select: {
-      id: true,
-      name: true,
-      profileImage: true,
-    },
+      select: {
+        id: true,
+        name: true,
+        profileImage: true,
+      },
 
-    orderBy: {
-      name: 'asc',
-    },
-  });
-}
+      orderBy: {
+        name: 'asc',
+      },
+    });
+  }
 
   // ==========================================
   // GET USER PROFILE BY ID
@@ -52,7 +52,12 @@ export class UsersService {
           id: true,
           name: true,
           email: true,
+
+          // Profile Image
           profileImage: true,
+
+          // Cover Image
+          coverImage: true,
 
           _count: {
             select: {
@@ -115,12 +120,65 @@ export class UsersService {
           name: true,
           email: true,
           profileImage: true,
+          coverImage: true,
         },
       });
 
     return {
       message:
         'Profile image updated successfully',
+
+      user: updatedUser,
+    };
+  }
+
+  // ==========================================
+  // UPDATE COVER IMAGE
+  // ==========================================
+
+  async updateCoverImage(
+    userId: number,
+    file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException(
+        'Cover image is required',
+      );
+    }
+
+    // ========================================
+    // CREATE COVER IMAGE URL
+    // ========================================
+
+    const imageUrl =
+      `/uploads/cover-images/${file.filename}`;
+
+    // ========================================
+    // UPDATE USER
+    // ========================================
+
+    const updatedUser =
+      await this.prisma.user.update({
+        where: {
+          id: userId,
+        },
+
+        data: {
+          coverImage: imageUrl,
+        },
+
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profileImage: true,
+          coverImage: true,
+        },
+      });
+
+    return {
+      message:
+        'Cover image updated successfully',
 
       user: updatedUser,
     };

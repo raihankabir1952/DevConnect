@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import {
   ChangeEvent,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
@@ -12,7 +13,9 @@ interface User {
   id: number;
   name: string;
   email: string;
-  profileImage: string | null;
+
+  profileImage?: string | null;
+  coverImage?: string | null;
 
   _count: {
     posts: number;
@@ -32,6 +35,7 @@ interface Post {
   author: {
     id: number;
     name: string;
+    profileImage: string | null;
   };
 
   _count: {
@@ -52,9 +56,6 @@ export default function ProfilePage() {
   const [user, setUser] =
     useState<User | null>(null);
 
-  const [uploading, setUploading] =
-  useState(false);
-
   const [posts, setPosts] =
     useState<Post[]>([]);
 
@@ -72,10 +73,21 @@ export default function ProfilePage() {
   // PROFILE IMAGE STATE
   // ==========================================
 
-  const [
-    profileImageLoading,
-    setProfileImageLoading,
-  ] = useState(false);
+  const [profileImageLoading, setProfileImageLoading] =
+    useState(false);
+
+  const profileImageInputRef =
+    useRef<HTMLInputElement | null>(null);
+
+  // ==========================================
+  // COVER IMAGE STATE
+  // ==========================================
+
+  const [coverImageLoading, setCoverImageLoading] =
+    useState(false);
+
+  const coverImageInputRef =
+    useRef<HTMLInputElement | null>(null);
 
   // ==========================================
   // PAGE STATE
@@ -95,7 +107,7 @@ export default function ProfilePage() {
     useState<number | null>(null);
 
   // ==========================================
-  // GET CURRENT USER
+  // GET CURRENT USER FROM LOCAL STORAGE
   // ==========================================
 
   useEffect(() => {
@@ -103,6 +115,7 @@ export default function ProfilePage() {
       localStorage.getItem('user');
 
     if (!storedUser) {
+      setCurrentUserId(null);
       return;
     }
 
@@ -118,6 +131,8 @@ export default function ProfilePage() {
         'Failed to parse logged-in user:',
         error,
       );
+
+      setCurrentUserId(null);
     }
   }, []);
 
@@ -136,7 +151,7 @@ export default function ProfilePage() {
         setError('');
 
         // ======================================
-        // FETCH USER
+        // FETCH USER PROFILE
         // ======================================
 
         const userResponse =
@@ -161,16 +176,13 @@ export default function ProfilePage() {
         // ======================================
 
         const normalizedUser: User = {
-          id: Number(userData?.id) || 0,
-
-          name:
-            userData?.name || 'Unknown User',
-
-          email:
-            userData?.email || '',
+          ...userData,
 
           profileImage:
             userData?.profileImage || null,
+
+          coverImage:
+            userData?.coverImage || null,
 
           _count: {
             posts:
@@ -224,7 +236,7 @@ export default function ProfilePage() {
         }
 
         // ======================================
-        // HANDLE PAGINATION
+        // HANDLE PAGINATED RESPONSE
         // ======================================
 
         const allPosts: Post[] =
@@ -239,8 +251,7 @@ export default function ProfilePage() {
         const userPosts =
           allPosts.filter(
             (post: Post) =>
-              Number(post.author?.id) ===
-              userId,
+              post.author?.id === userId,
           );
 
         setPosts(userPosts);
@@ -264,185 +275,288 @@ export default function ProfilePage() {
   }, [userId]);
 
   // ==========================================
-  // UPLOAD PROFILE IMAGE
+  // PROFILE IMAGE UPLOAD
   // ==========================================
 
-// ==========================================
-// CHANGE PROFILE IMAGE
-// ==========================================
-
-async function handleProfileImageChange(
-  event: ChangeEvent<HTMLInputElement>,
-) {
-  const file =
-    event.target.files?.[0];
-
-  // ========================================
-  // CHECK FILE
-  // ========================================
-
-  if (!file) {
-    return;
-  }
-
-  // ========================================
-  // CHECK LOGIN TOKEN
-  // ========================================
-
-  const token =
-    localStorage.getItem(
-      'accessToken',
-    );
-
-  if (!token) {
-    setError(
-      'Please login to change your profile picture.',
-    );
-
-    return;
-  }
-
-  // ========================================
-  // CHECK FILE TYPE
-  // ========================================
-
-  if (!file.type.startsWith('image/')) {
-    setError(
-      'Only image files are allowed.',
-    );
-
-    return;
-  }
-
-  // ========================================
-  // CHECK FILE SIZE
-  // Maximum 5 MB
-  // ========================================
-
-  if (
-    file.size >
-    5 * 1024 * 1024
+  async function handleProfileImageChange(
+    event: ChangeEvent<HTMLInputElement>,
   ) {
-    setError(
-      'Image size must be less than 5 MB.',
-    );
+    const file =
+      event.target.files?.[0];
 
-    return;
-  }
-
-  try {
-    setUploading(true);
-
-    setError('');
-
-    // ======================================
-    // CREATE FORM DATA
-    // ======================================
-
-    const formData =
-      new FormData();
-
-    // IMPORTANT:
-    // Backend uses FileInterceptor('file')
-    // So field name MUST be "file"
-
-    formData.append(
-      'file',
-      file,
-    );
-
-    // ======================================
-    // SEND REQUEST
-    // ======================================
-
-    const response =
-      await fetch(
-        'http://localhost:3000/users/profile-image',
-        {
-          method: 'PATCH',
-
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-
-          // Do NOT manually set
-          // Content-Type here.
-          // Browser will automatically
-          // set multipart/form-data boundary.
-
-          body: formData,
-        },
-      );
-
-    // ======================================
-    // GET RESPONSE
-    // ======================================
-
-    const data =
-      await response.json().catch(
-        () => null,
-      );
-
-    console.log(
-      'Profile image upload response:',
-      data,
-    );
-
-    // ======================================
-    // HANDLE ERROR
-    // ======================================
-
-    if (!response.ok) {
-      throw new Error(
-        data?.message ||
-          'Failed to upload profile image',
-      );
+    if (!file) {
+      return;
     }
 
-    // ======================================
-    // UPDATE PROFILE IMAGE IN UI
-    // ======================================
+    const token =
+      localStorage.getItem('accessToken');
 
-    setUser(
-      (previousUser) => {
-        if (!previousUser) {
-          return previousUser;
+    if (!token) {
+      setError(
+        'Please login to change your profile image.',
+      );
+
+      return;
+    }
+
+    // Only image
+    if (!file.type.startsWith('image/')) {
+      setError(
+        'Only image files are allowed.',
+      );
+
+      return;
+    }
+
+    // Maximum 5 MB
+    if (file.size > 5 * 1024 * 1024) {
+      setError(
+        'Image size must be less than 5 MB.',
+      );
+
+      return;
+    }
+
+    setProfileImageLoading(true);
+    setError('');
+
+    try {
+      const formData =
+        new FormData();
+
+      // IMPORTANT:
+      // Backend uses FileInterceptor('file')
+      formData.append(
+        'file',
+        file,
+      );
+
+      const response =
+        await fetch(
+          'http://localhost:3000/users/profile-image',
+          {
+            method: 'PATCH',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+
+            body: formData,
+          },
+        );
+
+      const data =
+        await response.json().catch(
+          () => null,
+        );
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            'Failed to upload profile image',
+        );
+      }
+
+      // ======================================
+      // UPDATE USER STATE
+      // ======================================
+
+      if (data?.user) {
+        setUser(
+          (previousUser) => {
+            if (!previousUser) {
+              return previousUser;
+            }
+
+            return {
+              ...previousUser,
+
+              profileImage:
+                data.user.profileImage ||
+                null,
+            };
+          },
+        );
+      }
+
+      // ======================================
+      // UPDATE LOCAL STORAGE USER
+      // ======================================
+
+      const storedUser =
+        localStorage.getItem('user');
+
+      if (storedUser && data?.user) {
+        try {
+          const parsedUser =
+            JSON.parse(storedUser);
+
+          localStorage.setItem(
+            'user',
+            JSON.stringify({
+              ...parsedUser,
+              profileImage:
+                data.user.profileImage,
+            }),
+          );
+        } catch (error) {
+          console.error(
+            'Failed to update local storage user:',
+            error,
+          );
         }
+      }
+    } catch (error) {
+      console.error(
+        'Profile image upload error:',
+        error,
+      );
 
-        return {
-          ...previousUser,
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload profile image',
+      );
+    } finally {
+      setProfileImageLoading(false);
 
-          profileImage:
-            data.profileImage,
-        };
-      },
-    );
-
-    console.log(
-      'Profile image updated successfully',
-    );
-  } catch (error) {
-    console.error(
-      'Profile image upload error:',
-      error,
-    );
-
-    setError(
-      error instanceof Error
-        ? error.message
-        : 'Failed to upload profile image',
-    );
-  } finally {
-    setUploading(false);
-
-    // ======================================
-    // RESET FILE INPUT
-    // ======================================
-
-    event.target.value = '';
+      // Reset input
+      if (
+        profileImageInputRef.current
+      ) {
+        profileImageInputRef.current.value =
+          '';
+      }
+    }
   }
-}
+
+  // ==========================================
+  // COVER IMAGE UPLOAD
+  // ==========================================
+
+  async function handleCoverImageChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file =
+      event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const token =
+      localStorage.getItem('accessToken');
+
+    if (!token) {
+      setError(
+        'Please login to change your cover image.',
+      );
+
+      return;
+    }
+
+    // Only image
+    if (!file.type.startsWith('image/')) {
+      setError(
+        'Only image files are allowed.',
+      );
+
+      return;
+    }
+
+    // Maximum 5 MB
+    if (file.size > 5 * 1024 * 1024) {
+      setError(
+        'Cover image size must be less than 5 MB.',
+      );
+
+      return;
+    }
+
+    setCoverImageLoading(true);
+    setError('');
+
+    try {
+      const formData =
+        new FormData();
+
+      // IMPORTANT:
+      // Backend uses FileInterceptor('file')
+      formData.append(
+        'file',
+        file,
+      );
+
+      const response =
+        await fetch(
+          'http://localhost:3000/users/cover-image',
+          {
+            method: 'PATCH',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+
+            body: formData,
+          },
+        );
+
+      const data =
+        await response.json().catch(
+          () => null,
+        );
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            'Failed to upload cover image',
+        );
+      }
+
+      // ======================================
+      // UPDATE USER STATE
+      // ======================================
+
+      if (data?.user) {
+        setUser(
+          (previousUser) => {
+            if (!previousUser) {
+              return previousUser;
+            }
+
+            return {
+              ...previousUser,
+
+              coverImage:
+                data.user.coverImage ||
+                null,
+            };
+          },
+        );
+      }
+    } catch (error) {
+      console.error(
+        'Cover image upload error:',
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload cover image',
+      );
+    } finally {
+      setCoverImageLoading(false);
+
+      // Reset input
+      if (
+        coverImageInputRef.current
+      ) {
+        coverImageInputRef.current.value =
+          '';
+      }
+    }
+  }
 
   // ==========================================
   // FOLLOW USER
@@ -692,12 +806,17 @@ async function handleProfileImageChange(
     currentUserId === user.id;
 
   // ==========================================
-  // PROFILE IMAGE URL
+  // IMAGE URL
   // ==========================================
 
   const profileImageUrl =
     user.profileImage
       ? `http://localhost:3000${user.profileImage}`
+      : null;
+
+  const coverImageUrl =
+    user.coverImage
+      ? `http://localhost:3000${user.coverImage}`
       : null;
 
   // ==========================================
@@ -726,10 +845,59 @@ async function handleProfileImageChange(
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
 
           {/* ==================================== */}
-          {/* COVER */}
+          {/* COVER PHOTO */}
           {/* ==================================== */}
 
-          <div className="h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+          <div
+            className={`relative h-48 sm:h-56 ${
+              coverImageUrl
+                ? 'bg-gray-200'
+                : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
+            }`}
+          >
+            {coverImageUrl && (
+              <img
+                src={coverImageUrl}
+                alt={`${user.name}'s cover`}
+                className="h-full w-full object-cover"
+              />
+            )}
+
+            {/* Change Cover Button */}
+
+            {isOwnProfile && (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    coverImageInputRef.current?.click()
+                  }
+                  disabled={
+                    coverImageLoading
+                  }
+                  className="absolute right-4 top-4 rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/70 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {coverImageLoading
+                    ? 'Uploading...'
+                    : coverImageUrl
+                      ? 'Change Cover'
+                      : 'Add Cover'}
+                </button>
+
+                <input
+                  ref={
+                    coverImageInputRef
+                  }
+                  type="file"
+                  accept="image/*"
+                  onChange={
+                    handleCoverImageChange
+                  }
+                  className="hidden"
+                />
+              </>
+            )}
+          </div>
 
           {/* ==================================== */}
           {/* PROFILE INFO */}
@@ -740,55 +908,58 @@ async function handleProfileImageChange(
             <div className="-mt-12 flex flex-col items-start sm:flex-row sm:items-end sm:justify-between">
 
               {/* ================================= */}
-              {/* AVATAR + UPLOAD BUTTON */}
+              {/* PROFILE IMAGE */}
               {/* ================================= */}
 
               <div className="relative">
 
-                {/* PROFILE IMAGE */}
-
-                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-600 shadow-md">
-
-                  {profileImageUrl ? (
-                    <img
-                      src={profileImageUrl}
-                      alt={user.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    user.name
+                {profileImageUrl ? (
+                  <img
+                    src={profileImageUrl}
+                    alt={user.name}
+                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-600 shadow-md">
+                    {user.name
                       .charAt(0)
-                      .toUpperCase()
-                  )}
+                      .toUpperCase()}
+                  </div>
+                )}
 
-                </div>
-
-                {/* ================================= */}
-                {/* CAMERA / UPLOAD BUTTON */}
-                {/* ================================= */}
+                {/* Change Profile Picture */}
 
                 {isOwnProfile && (
-                  <label className="absolute bottom-0 right-0 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-blue-600 text-lg text-white shadow-md transition hover:bg-blue-700">
-
-                    {profileImageLoading
-                      ? '...'
-                      : '📷'}
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        profileImageInputRef.current?.click()
+                      }
                       disabled={
                         profileImageLoading
                       }
+                      className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-sm text-white shadow-md transition hover:bg-blue-700 disabled:opacity-50"
+                      title="Change profile picture"
+                    >
+                      {profileImageLoading
+                        ? '...'
+                        : '📷'}
+                    </button>
+
+                    <input
+                      ref={
+                        profileImageInputRef
+                      }
+                      type="file"
+                      accept="image/*"
                       onChange={
                         handleProfileImageChange
                       }
+                      className="hidden"
                     />
-
-                  </label>
+                  </>
                 )}
-
               </div>
 
               {/* ================================= */}
@@ -803,7 +974,9 @@ async function handleProfileImageChange(
                       ? handleUnfollow
                       : handleFollow
                   }
-                  disabled={followLoading}
+                  disabled={
+                    followLoading
+                  }
                   className={`mt-4 rounded-full px-6 py-2.5 text-sm font-semibold transition sm:mt-0 ${
                     isFollowing
                       ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
@@ -817,15 +990,13 @@ async function handleProfileImageChange(
                       : 'Follow'}
                 </button>
               )}
-
             </div>
 
-            {/* ==================================== */}
+            {/* ================================= */}
             {/* USER DETAILS */}
-            {/* ==================================== */}
+            {/* ================================= */}
 
             <div className="mt-4">
-
               <h1 className="text-2xl font-bold text-gray-900">
                 {user.name}
               </h1>
@@ -833,34 +1004,25 @@ async function handleProfileImageChange(
               <p className="mt-1 text-sm text-gray-500">
                 {user.email}
               </p>
-
             </div>
 
-            {/* ==================================== */}
-            {/* MESSAGE */}
-            {/* ==================================== */}
+            {/* ================================= */}
+            {/* ERROR */}
+            {/* ================================= */}
 
             {error && (
-              <div
-                className={`mt-4 rounded-lg p-3 text-sm ${
-                  error.includes(
-                    'successfully',
-                  )
-                    ? 'bg-green-50 text-green-600'
-                    : 'bg-red-50 text-red-600'
-                }`}
-              >
+              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
                 {error}
               </div>
             )}
 
-            {/* ==================================== */}
+            {/* ================================= */}
             {/* USER STATS */}
-            {/* ==================================== */}
+            {/* ================================= */}
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
 
-              {/* POSTS */}
+              {/* Posts */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -874,7 +1036,7 @@ async function handleProfileImageChange(
                 </p>
               </div>
 
-              {/* FOLLOWERS */}
+              {/* Followers */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -888,7 +1050,7 @@ async function handleProfileImageChange(
                 </p>
               </div>
 
-              {/* FOLLOWING */}
+              {/* Following */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -902,7 +1064,7 @@ async function handleProfileImageChange(
                 </p>
               </div>
 
-              {/* COMMENTS */}
+              {/* Comments */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -916,7 +1078,7 @@ async function handleProfileImageChange(
                 </p>
               </div>
 
-              {/* LIKES */}
+              {/* Likes */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -931,7 +1093,6 @@ async function handleProfileImageChange(
               </div>
 
             </div>
-
           </div>
         </div>
 
@@ -947,16 +1108,13 @@ async function handleProfileImageChange(
 
           {posts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
-
               <p className="font-medium text-gray-700">
                 No posts yet
               </p>
 
               <p className="mt-2 text-sm text-gray-500">
-                This user hasn't shared any
-                posts yet.
+                This user hasn't shared any posts yet.
               </p>
-
             </div>
           ) : (
             <div className="space-y-5">
@@ -978,7 +1136,6 @@ async function handleProfileImageChange(
                     </div>
 
                     <div>
-
                       <p className="font-semibold text-gray-900">
                         {post.author.name}
                       </p>
@@ -988,7 +1145,6 @@ async function handleProfileImageChange(
                           post.createdAt,
                         ).toLocaleDateString()}
                       </p>
-
                     </div>
 
                   </div>
@@ -1036,7 +1192,6 @@ async function handleProfileImageChange(
           )}
 
         </div>
-
       </main>
     </div>
   );

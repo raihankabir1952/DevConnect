@@ -121,21 +121,104 @@ export class UsersController {
     @Req()
     req: any,
   ) {
-    // ========================================
-    // CHECK FILE
-    // ========================================
-
     if (!file) {
       throw new BadRequestException(
         'Profile image is required',
       );
     }
 
-    // ========================================
-    // UPDATE PROFILE IMAGE
-    // ========================================
-
     return this.usersService.updateProfileImage(
+      req.user.userId,
+      file,
+    );
+  }
+
+  // ==========================================
+  // UPLOAD / CHANGE COVER IMAGE
+  // PATCH /users/cover-image
+  // ==========================================
+
+  @Patch('cover-image')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination:
+          './uploads/cover-images',
+
+        filename: (
+          req,
+          file,
+          callback,
+        ) => {
+          const uniqueName =
+            `${Date.now()}-${Math.round(
+              Math.random() * 1e9,
+            )}${extname(
+              file.originalname,
+            )}`;
+
+          callback(
+            null,
+            uniqueName,
+          );
+        },
+      }),
+
+      // ======================================
+      // FILE FILTER
+      // Only image files allowed
+      // ======================================
+
+      fileFilter: (
+        req,
+        file,
+        callback,
+      ) => {
+        if (
+          !file.mimetype.startsWith(
+            'image/',
+          )
+        ) {
+          return callback(
+            new BadRequestException(
+              'Only image files are allowed',
+            ),
+            false,
+          );
+        }
+
+        callback(
+          null,
+          true,
+        );
+      },
+
+      // ======================================
+      // FILE SIZE LIMIT
+      // Maximum 5 MB
+      // ======================================
+
+      limits: {
+        fileSize:
+          5 * 1024 * 1024,
+      },
+    }),
+  )
+  async updateCoverImage(
+    @UploadedFile()
+    file: Express.Multer.File,
+
+    @Req()
+    req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException(
+        'Cover image is required',
+      );
+    }
+
+    return this.usersService.updateCoverImage(
       req.user.userId,
       file,
     );
