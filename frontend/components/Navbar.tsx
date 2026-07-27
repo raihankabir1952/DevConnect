@@ -6,12 +6,14 @@ import { useEffect, useRef, useState } from 'react';
 interface User {
   id: number;
   name: string;
+  profileImage?: string | null;
 }
 
 interface LoggedInUser {
   id: number;
   name: string;
   email: string;
+  profileImage?: string | null;
 }
 
 export default function Navbar() {
@@ -49,27 +51,65 @@ export default function Navbar() {
   // ==========================================
 
   useEffect(() => {
-    const storedUser =
-      localStorage.getItem('user');
+    async function loadCurrentUser() {
+      const storedUser =
+        localStorage.getItem('user');
 
-    if (!storedUser) {
-      setCurrentUser(null);
-      return;
+      if (!storedUser) {
+        setCurrentUser(null);
+        return;
+      }
+
+      try {
+        const parsedUser: LoggedInUser =
+          JSON.parse(storedUser);
+
+        // প্রথমে localStorage-এর user দেখাবে
+        setCurrentUser(parsedUser);
+
+        // ======================================
+        // FETCH LATEST USER PROFILE
+        // This gets latest profileImage
+        // ======================================
+
+        const response = await fetch(
+          `http://localhost:3000/users/${parsedUser.id}`,
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const latestUser =
+          await response.json();
+
+        const updatedUser: LoggedInUser = {
+          id: latestUser.id,
+          name: latestUser.name,
+          email: latestUser.email,
+          profileImage:
+            latestUser.profileImage || null,
+        };
+
+        // Update state
+        setCurrentUser(updatedUser);
+
+        // Update localStorage
+        localStorage.setItem(
+          'user',
+          JSON.stringify(updatedUser),
+        );
+      } catch (error) {
+        console.error(
+          'Failed to load user:',
+          error,
+        );
+
+        setCurrentUser(null);
+      }
     }
 
-    try {
-      const user: LoggedInUser =
-        JSON.parse(storedUser);
-
-      setCurrentUser(user);
-    } catch (error) {
-      console.error(
-        'Failed to load user:',
-        error,
-      );
-
-      setCurrentUser(null);
-    }
+    loadCurrentUser();
   }, []);
 
   // ==========================================
@@ -208,6 +248,29 @@ export default function Navbar() {
     window.location.href = '/login';
   }
 
+  // ==========================================
+  // PROFILE IMAGE URL
+  // ==========================================
+
+  function getProfileImageUrl(
+    profileImage?: string | null,
+  ) {
+    if (!profileImage) {
+      return null;
+    }
+
+    // যদি already full URL হয়
+    if (
+      profileImage.startsWith('http://') ||
+      profileImage.startsWith('https://')
+    ) {
+      return profileImage;
+    }
+
+    // Backend থেকে পাওয়া path
+    return `http://localhost:3000${profileImage}`;
+  }
+
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       {/* ========================================== */}
@@ -215,6 +278,7 @@ export default function Navbar() {
       {/* ========================================== */}
 
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+
         {/* ========================================== */}
         {/* LOGO */}
         {/* ========================================== */}
@@ -273,36 +337,51 @@ export default function Navbar() {
             <div className="absolute left-0 right-0 top-14 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
               {users.length > 0 ? (
                 <div className="py-2">
-                  {users.map((user) => (
-                    <Link
-                      key={user.id}
-                      href={`/profile/${user.id}`}
-                      onClick={
-                        handleUserClick
-                      }
-                      className="flex items-center gap-3 px-4 py-3 transition hover:bg-gray-50"
-                    >
-                      {/* Avatar */}
+                  {users.map((user) => {
+                    const imageUrl =
+                      getProfileImageUrl(
+                        user.profileImage,
+                      );
 
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600">
-                        {user.name
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
+                    return (
+                      <Link
+                        key={user.id}
+                        href={`/profile/${user.id}`}
+                        onClick={
+                          handleUserClick
+                        }
+                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-gray-50"
+                      >
+                        {/* Avatar */}
 
-                      {/* User Info */}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={user.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            user.name
+                              .charAt(0)
+                              .toUpperCase()
+                          )}
+                        </div>
 
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {user.name}
-                        </p>
+                        {/* User Info */}
 
-                        <p className="text-xs text-gray-500">
-                          View profile
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {user.name}
+                          </p>
+
+                          <p className="text-xs text-gray-500">
+                            View profile
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 !searching && (
@@ -327,6 +406,7 @@ export default function Navbar() {
         {/* ========================================== */}
 
         <div className="flex items-center gap-3">
+
           {/* Home */}
 
           <Link
@@ -336,7 +416,9 @@ export default function Navbar() {
             Home
           </Link>
 
-          {/* Logged In */}
+          {/* ========================================== */}
+          {/* LOGGED IN USER */}
+          {/* ========================================== */}
 
           {currentUser ? (
             <>
@@ -346,11 +428,27 @@ export default function Navbar() {
                 href={`/profile/${currentUser.id}`}
                 className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-blue-600">
-                  {currentUser.name
-                    .charAt(0)
-                    .toUpperCase()}
-                </span>
+                {/* Profile Avatar */}
+
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold text-blue-600">
+                  {getProfileImageUrl(
+                    currentUser.profileImage,
+                  ) ? (
+                    <img
+                      src={getProfileImageUrl(
+                        currentUser.profileImage,
+                      )!}
+                      alt={currentUser.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    currentUser.name
+                      .charAt(0)
+                      .toUpperCase()
+                  )}
+                </div>
+
+                {/* User Name */}
 
                 <span className="hidden sm:inline">
                   {currentUser.name}
@@ -396,6 +494,7 @@ export default function Navbar() {
 
       <div className="border-t border-gray-100 px-4 py-3 md:hidden">
         <div className="relative">
+
           {/* Input */}
 
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -423,36 +522,51 @@ export default function Navbar() {
             <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
               {users.length > 0 ? (
                 <div className="py-2">
-                  {users.map((user) => (
-                    <Link
-                      key={user.id}
-                      href={`/profile/${user.id}`}
-                      onClick={
-                        handleUserClick
-                      }
-                      className="flex items-center gap-3 px-4 py-3 transition hover:bg-gray-50"
-                    >
-                      {/* Avatar */}
+                  {users.map((user) => {
+                    const imageUrl =
+                      getProfileImageUrl(
+                        user.profileImage,
+                      );
 
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600">
-                        {user.name
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
+                    return (
+                      <Link
+                        key={user.id}
+                        href={`/profile/${user.id}`}
+                        onClick={
+                          handleUserClick
+                        }
+                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-gray-50"
+                      >
+                        {/* Avatar */}
 
-                      {/* User Info */}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={user.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            user.name
+                              .charAt(0)
+                              .toUpperCase()
+                          )}
+                        </div>
 
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {user.name}
-                        </p>
+                        {/* User Info */}
 
-                        <p className="text-xs text-gray-500">
-                          View profile
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {user.name}
+                          </p>
+
+                          <p className="text-xs text-gray-500">
+                            View profile
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 !searching && (

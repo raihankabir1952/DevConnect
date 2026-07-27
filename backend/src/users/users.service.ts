@@ -17,25 +17,25 @@ export class UsersService {
   // ==========================================
 
   async searchUsers(name: string) {
-    return this.prisma.user.findMany({
-      where: {
-        name: {
-          contains: name,
-          mode: 'insensitive',
-        },
+  return this.prisma.user.findMany({
+    where: {
+      name: {
+        contains: name,
+        mode: 'insensitive',
       },
+    },
 
-      select: {
-        id: true,
-        name: true,
-        profileImage: true,
-      },
+    select: {
+      id: true,
+      name: true,
+      profileImage: true,
+    },
 
-      orderBy: {
-        name: 'asc',
-      },
-    });
-  }
+    orderBy: {
+      name: 'asc',
+    },
+  });
+}
 
   // ==========================================
   // GET USER PROFILE BY ID
