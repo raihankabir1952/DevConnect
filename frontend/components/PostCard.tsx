@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from 'react';
 
 import CommentSection from './CommentSection';
 
@@ -39,6 +43,10 @@ export default function PostCard({
   onPostUpdated,
   onPostDeleted,
 }: PostCardProps) {
+  // ==========================================
+  // STATES
+  // ==========================================
+
   const [loading, setLoading] =
     useState(false);
 
@@ -61,39 +69,68 @@ export default function PostCard({
 
   const [error, setError] = useState('');
 
-  // Get current logged-in user
-  const storedUser =
-    typeof window !== 'undefined'
-      ? localStorage.getItem('user')
-      : null;
+  // Like states
+  const [liked, setLiked] =
+    useState(false);
 
-  let currentUserId: number | null = null;
+  const [likeCount, setLikeCount] =
+    useState(post._count.likes);
 
-  if (storedUser) {
-    try {
-      const user = JSON.parse(storedUser);
+  // ==========================================
+  // GET CURRENT USER
+  // ==========================================
 
-      currentUserId = user.id;
-    } catch (error) {
-      console.error(
-        'Failed to parse user:',
-        error,
-      );
+  const [
+    currentUserId,
+    setCurrentUserId,
+  ] = useState<number | null>(null);
+
+  useEffect(() => {
+    const storedUser =
+      localStorage.getItem('user');
+
+    if (storedUser) {
+      try {
+        const user = JSON.parse(
+          storedUser,
+        );
+
+        setCurrentUserId(user.id);
+      } catch (error) {
+        console.error(
+          'Failed to parse user:',
+          error,
+        );
+
+        setCurrentUserId(null);
+      }
     }
-  }
+  }, []);
 
-  // Check if current user is post owner
+  // ==========================================
+  // UPDATE LIKE COUNT
+  // ==========================================
+
+  useEffect(() => {
+    setLikeCount(post._count.likes);
+  }, [post._count.likes]);
+
+  // ==========================================
+  // CHECK POST OWNER
+  // ==========================================
+
   const isOwner =
     currentUserId === post.authorId;
 
-  // ================================
-  // LIKE POST
-  // ================================
+  // ==========================================
+  // LIKE / UNLIKE POST
+  // ==========================================
 
   async function handleLike() {
     const token =
       localStorage.getItem('accessToken');
 
+    // Check login
     if (!token) {
       setError(
         'Please login to like a post.',
@@ -118,17 +155,40 @@ export default function PostCard({
         },
       );
 
-      if (!response.ok) {
-        const data =
-          await response.json();
+      const data =
+        await response.json();
 
+      if (!response.ok) {
         throw new Error(
           data.message ||
             'Failed to like post',
         );
       }
 
-      // Refresh post data
+      // ======================================
+      // UPDATE LIKE UI
+      // ======================================
+
+      if (data.liked) {
+        setLiked(true);
+
+        setLikeCount(
+          (previous) =>
+            previous + 1,
+        );
+      } else {
+        setLiked(false);
+
+        setLikeCount(
+          (previous) =>
+            Math.max(
+              0,
+              previous - 1,
+            ),
+        );
+      }
+
+      // Optional refresh
       if (onPostUpdated) {
         onPostUpdated();
       }
@@ -145,9 +205,9 @@ export default function PostCard({
     }
   }
 
-  // ================================
+  // ==========================================
   // UPDATE POST
-  // ================================
+  // ==========================================
 
   async function handleUpdate(
     e: FormEvent<HTMLFormElement>,
@@ -200,17 +260,17 @@ export default function PostCard({
         },
       );
 
-      if (!response.ok) {
-        const data =
-          await response.json();
+      const data =
+        await response.json();
 
+      if (!response.ok) {
         throw new Error(
           data.message ||
             'Failed to update post',
         );
       }
 
-      // Close modal
+      // Close edit modal
       setShowEditModal(false);
 
       // Close menu
@@ -233,9 +293,9 @@ export default function PostCard({
     }
   }
 
-  // ================================
+  // ==========================================
   // DELETE POST
-  // ================================
+  // ==========================================
 
   async function handleDelete() {
     const token =
@@ -265,17 +325,17 @@ export default function PostCard({
         },
       );
 
-      if (!response.ok) {
-        const data =
-          await response.json();
+      const data =
+        await response.json();
 
+      if (!response.ok) {
         throw new Error(
           data.message ||
             'Failed to delete post',
         );
       }
 
-      // Remove post from feed
+      // Remove post
       if (onPostDeleted) {
         onPostDeleted(post.id);
       }
@@ -305,14 +365,14 @@ export default function PostCard({
       {/* ================================= */}
 
       <article className="relative rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
-        {/* ================================ */}
+        {/* ================================= */}
         {/* AUTHOR HEADER */}
-        {/* ================================ */}
+        {/* ================================= */}
 
         <div className="flex items-start justify-between">
-          {/* Author Information */}
+          {/* Author */}
           <div className="flex items-center gap-3">
-            {/* Clickable Avatar */}
+            {/* Avatar */}
             <Link
               href={`/profile/${post.author.id}`}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600 transition hover:bg-blue-200"
@@ -324,7 +384,6 @@ export default function PostCard({
 
             {/* Name + Date */}
             <div>
-              {/* Clickable Name */}
               <Link
                 href={`/profile/${post.author.id}`}
                 className="font-semibold text-gray-900 transition hover:text-blue-600"
@@ -340,15 +399,17 @@ export default function PostCard({
             </div>
           </div>
 
-          {/* ================================ */}
+          {/* ================================= */}
           {/* MORE MENU */}
-          {/* ================================ */}
+          {/* ================================= */}
 
           {isOwner && (
             <div className="relative">
               <button
                 onClick={() =>
-                  setShowMenu(!showMenu)
+                  setShowMenu(
+                    !showMenu,
+                  )
                 }
                 className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-gray-500 transition hover:bg-gray-100"
               >
@@ -366,7 +427,9 @@ export default function PostCard({
 
                       setError('');
 
-                      setTitle(post.title);
+                      setTitle(
+                        post.title,
+                      );
 
                       setContent(
                         post.content,
@@ -398,12 +461,12 @@ export default function PostCard({
           )}
         </div>
 
-        {/* ================================ */}
+        {/* ================================= */}
         {/* POST CONTENT */}
-        {/* ================================ */}
+        {/* ================================= */}
 
         <div className="mt-5">
-          {/* Clickable Post Title */}
+          {/* Title */}
           <Link
             href={`/posts/${post.id}`}
             className="block"
@@ -413,15 +476,15 @@ export default function PostCard({
             </h2>
           </Link>
 
-          {/* Post Content */}
+          {/* Content */}
           <p className="mt-2 whitespace-pre-wrap leading-7 text-gray-600">
             {post.content}
           </p>
         </div>
 
-        {/* ================================ */}
-        {/* ERROR MESSAGE */}
-        {/* ================================ */}
+        {/* ================================= */}
+        {/* ERROR */}
+        {/* ================================= */}
 
         {error && (
           <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
@@ -429,25 +492,42 @@ export default function PostCard({
           </div>
         )}
 
-        {/* ================================ */}
+        {/* ================================= */}
         {/* ACTIONS */}
-        {/* ================================ */}
+        {/* ================================= */}
 
         <div className="mt-6 flex items-center gap-6 border-t border-gray-100 pt-4">
-          {/* Like */}
+          {/* LIKE */}
+
           <button
             onClick={handleLike}
             disabled={loading}
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 transition hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex items-center gap-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              liked
+                ? 'text-red-500'
+                : 'text-gray-600 hover:text-red-500'
+            }`}
           >
-            ❤️
+            <span
+              className={
+                liked
+                  ? 'scale-110'
+                  : ''
+              }
+            >
+              ❤️
+            </span>
 
             <span>
-              {post._count.likes} Likes
+              {likeCount}{' '}
+              {likeCount === 1
+                ? 'Like'
+                : 'Likes'}
             </span>
           </button>
 
-          {/* Comments */}
+          {/* COMMENTS */}
+
           <CommentSection
             postId={post.id}
             commentCount={
@@ -464,7 +544,7 @@ export default function PostCard({
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-            {/* Modal Header */}
+            {/* Header */}
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">
                 Edit Post
@@ -484,7 +564,7 @@ export default function PostCard({
               </button>
             </div>
 
-            {/* Edit Form */}
+            {/* Form */}
             <form
               onSubmit={handleUpdate}
               className="mt-6 space-y-5"
@@ -536,7 +616,6 @@ export default function PostCard({
 
               {/* Buttons */}
               <div className="flex justify-end gap-3">
-                {/* Cancel */}
                 <button
                   type="button"
                   onClick={() => {
@@ -551,7 +630,6 @@ export default function PostCard({
                   Cancel
                 </button>
 
-                {/* Update */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -568,7 +646,7 @@ export default function PostCard({
       )}
 
       {/* ================================= */}
-      {/* DELETE CONFIRMATION MODAL */}
+      {/* DELETE MODAL */}
       {/* ================================= */}
 
       {showDeleteModal && (
@@ -595,7 +673,6 @@ export default function PostCard({
 
             {/* Buttons */}
             <div className="mt-6 flex justify-end gap-3">
-              {/* Cancel */}
               <button
                 onClick={() => {
                   setShowDeleteModal(
@@ -609,7 +686,6 @@ export default function PostCard({
                 Cancel
               </button>
 
-              {/* Delete */}
               <button
                 onClick={handleDelete}
                 disabled={loading}

@@ -11,16 +11,21 @@ export class LikesService {
     private readonly prisma: PrismaService,
   ) {}
 
+  // ==========================================
+  // LIKE / UNLIKE POST
+  // ==========================================
+
   async toggleLike(
     postId: number,
     userId: number,
   ) {
     // Check if post exists
-    const post = await this.prisma.post.findUnique({
-      where: {
-        id: postId,
-      },
-    });
+    const post =
+      await this.prisma.post.findUnique({
+        where: {
+          id: postId,
+        },
+      });
 
     if (!post) {
       throw new NotFoundException(
@@ -28,7 +33,7 @@ export class LikesService {
       );
     }
 
-    // Check if user already liked the post
+    // Check existing like
     const existingLike =
       await this.prisma.like.findUnique({
         where: {
@@ -39,7 +44,10 @@ export class LikesService {
         },
       });
 
-    // If already liked, remove like
+    // ==========================================
+    // UNLIKE
+    // ==========================================
+
     if (existingLike) {
       await this.prisma.like.delete({
         where: {
@@ -47,13 +55,28 @@ export class LikesService {
         },
       });
 
+      // Get updated like count
+      const likeCount =
+        await this.prisma.like.count({
+          where: {
+            postId,
+          },
+        });
+
       return {
-        message: 'Post unliked successfully',
+        message:
+          'Post unliked successfully',
+
         liked: false,
+
+        likeCount,
       };
     }
 
-    // Otherwise create like
+    // ==========================================
+    // LIKE
+    // ==========================================
+
     await this.prisma.like.create({
       data: {
         userId,
@@ -61,9 +84,59 @@ export class LikesService {
       },
     });
 
+    // Get updated like count
+    const likeCount =
+      await this.prisma.like.count({
+        where: {
+          postId,
+        },
+      });
+
     return {
-      message: 'Post liked successfully',
+      message:
+        'Post liked successfully',
+
       liked: true,
+
+      likeCount,
+    };
+  }
+
+  // ==========================================
+  // CHECK LIKE STATUS
+  // ==========================================
+
+  async getLikeStatus(
+    postId: number,
+    userId: number,
+  ) {
+    // Check if post exists
+    const post =
+      await this.prisma.post.findUnique({
+        where: {
+          id: postId,
+        },
+      });
+
+    if (!post) {
+      throw new NotFoundException(
+        'Post not found',
+      );
+    }
+
+    // Find user's like
+    const existingLike =
+      await this.prisma.like.findUnique({
+        where: {
+          userId_postId: {
+            userId,
+            postId,
+          },
+        },
+      });
+
+    return {
+      liked: !!existingLike,
     };
   }
 }
