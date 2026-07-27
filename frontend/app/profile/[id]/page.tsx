@@ -167,7 +167,7 @@ export default function ProfilePage() {
         if (!userResponse.ok) {
           throw new Error(
             userData?.message ||
-              'Failed to fetch user profile',
+            'Failed to fetch user profile',
           );
         }
 
@@ -231,7 +231,7 @@ export default function ProfilePage() {
         if (!postsResponse.ok) {
           throw new Error(
             postsData?.message ||
-              'Failed to fetch posts',
+            'Failed to fetch posts',
           );
         }
 
@@ -353,7 +353,7 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-            'Failed to upload profile image',
+          'Failed to upload profile image',
         );
       }
 
@@ -509,7 +509,7 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-            'Failed to upload cover image',
+          'Failed to upload cover image',
         );
       }
 
@@ -598,7 +598,7 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-            'Failed to follow user',
+          'Failed to follow user',
         );
       }
 
@@ -681,7 +681,7 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-            'Failed to unfollow user',
+          'Failed to unfollow user',
         );
       }
 
@@ -849,11 +849,10 @@ export default function ProfilePage() {
           {/* ==================================== */}
 
           <div
-            className={`relative h-48 sm:h-56 ${
-              coverImageUrl
+            className={`relative h-48 sm:h-56 ${coverImageUrl
                 ? 'bg-gray-200'
                 : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
-            }`}
+              }`}
           >
             {coverImageUrl && (
               <img
@@ -977,11 +976,10 @@ export default function ProfilePage() {
                   disabled={
                     followLoading
                   }
-                  className={`mt-4 rounded-full px-6 py-2.5 text-sm font-semibold transition sm:mt-0 ${
-                    isFollowing
+                  className={`mt-4 rounded-full px-6 py-2.5 text-sm font-semibold transition sm:mt-0 ${isFollowing
                       ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
-                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                    } disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   {followLoading
                     ? 'Please wait...'
@@ -1129,10 +1127,18 @@ export default function ProfilePage() {
 
                   <div className="flex items-center gap-3">
 
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600">
-                      {post.author.name
-                        .charAt(0)
-                        .toUpperCase()}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
+                      {post.author.profileImage ? (
+                        <img
+                          src={`http://localhost:3000${post.author.profileImage}`}
+                          alt={post.author.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        post.author.name
+                          .charAt(0)
+                          .toUpperCase()
+                      )}
                     </div>
 
                     <div>

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
@@ -14,159 +15,271 @@ export class PostsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  // Create a new post
+  // ==========================================
+  // CREATE A NEW POST
+  // ==========================================
+
   async create(
     createPostDto: CreatePostDto,
     userId: number,
   ) {
-    const post = await this.prisma.post.create({
-      data: {
-        title: createPostDto.title,
-        content: createPostDto.content,
-        authorId: userId,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    const post =
+      await this.prisma.post.create({
+        data: {
+          title: createPostDto.title,
+          content: createPostDto.content,
+          authorId: userId,
+        },
+
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+
+              // Profile Image
+              profileImage: true,
+            },
           },
         },
-      },
-    });
+      });
 
     return {
-      message: 'Post created successfully',
+      message:
+        'Post created successfully',
+
       post,
     };
   }
 
-  // Get all posts with search and pagination
+  // ==========================================
+  // GET ALL POSTS
+  // WITH SEARCH AND PAGINATION
+  // ==========================================
+
   async findAll(
     search?: string,
     page = 1,
     limit = 10,
   ) {
-    // Prevent invalid values
+    // ========================================
+    // PREVENT INVALID PAGE
+    // ========================================
+
     if (page < 1) {
       page = 1;
     }
+
+    // ========================================
+    // PREVENT INVALID LIMIT
+    // ========================================
 
     if (limit < 1) {
       limit = 10;
     }
 
-    // Prevent very large requests
+    // ========================================
+    // PREVENT VERY LARGE REQUESTS
+    // ========================================
+
     if (limit > 100) {
       limit = 100;
     }
 
-    const skip = (page - 1) * limit;
+    // ========================================
+    // CALCULATE SKIP
+    // ========================================
 
-    // Search condition
+    const skip =
+      (page - 1) * limit;
+
+    // ========================================
+    // SEARCH CONDITION
+    // ========================================
+
     const where = search
       ? {
           OR: [
             {
               title: {
                 contains: search,
-                mode: 'insensitive' as const,
+
+                mode:
+                  'insensitive' as const,
               },
             },
+
             {
               content: {
                 contains: search,
-                mode: 'insensitive' as const,
+
+                mode:
+                  'insensitive' as const,
               },
             },
           ],
         }
       : undefined;
 
-    // Get posts and total count together
-    const [posts, totalPosts] =
-      await Promise.all([
-        this.prisma.post.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: {
-            createdAt: 'desc',
-          },
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            _count: {
-              select: {
-                comments: true,
-                likes: true,
-              },
-            },
-          },
-        }),
+    // ========================================
+    // GET POSTS + TOTAL COUNT
+    // ========================================
 
-        this.prisma.post.count({
-          where,
-        }),
-      ]);
+    const [
+      posts,
+      totalPosts,
+    ] = await Promise.all([
+      this.prisma.post.findMany({
+        where,
 
-    const totalPages = Math.ceil(
-      totalPosts / limit,
-    );
+        skip,
+
+        take: limit,
+
+        orderBy: {
+          createdAt: 'desc',
+        },
+
+        include: {
+          // ==================================
+          // POST AUTHOR
+          // ==================================
+
+          author: {
+            select: {
+              id: true,
+              name: true,
+
+              // IMPORTANT
+              // Return profile image
+              profileImage: true,
+            },
+          },
+
+          // ==================================
+          // POST COUNTS
+          // ==================================
+
+          _count: {
+            select: {
+              comments: true,
+              likes: true,
+            },
+          },
+        },
+      }),
+
+      // ======================================
+      // TOTAL POSTS
+      // ======================================
+
+      this.prisma.post.count({
+        where,
+      }),
+    ]);
+
+    // ========================================
+    // TOTAL PAGES
+    // ========================================
+
+    const totalPages =
+      Math.ceil(
+        totalPosts / limit,
+      );
+
+    // ========================================
+    // RETURN RESPONSE
+    // ========================================
 
     return {
       data: posts,
+
       pagination: {
         currentPage: page,
+
         limit,
+
         totalPosts,
+
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
+
+        hasNextPage:
+          page < totalPages,
+
+        hasPreviousPage:
+          page > 1,
       },
     };
   }
 
-  // Get single post
-  async findOne(id: number) {
-    const post = await this.prisma.post.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+  // ==========================================
+  // GET SINGLE POST
+  // ==========================================
+
+  async findOne(
+    id: number,
+  ) {
+    const post =
+      await this.prisma.post.findUnique({
+        where: {
+          id,
         },
-        comments: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-              },
+
+        include: {
+          // ==================================
+          // POST AUTHOR
+          // ==================================
+
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+
+              // Profile Image
+              profileImage: true,
             },
           },
-          orderBy: {
-            createdAt: 'desc',
+
+          // ==================================
+          // COMMENTS
+          // ==================================
+
+          comments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+
+                  // Profile Image
+                  profileImage: true,
+                },
+              },
+            },
+
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+
+          // ==================================
+          // POST COUNTS
+          // ==================================
+
+          _count: {
+            select: {
+              comments: true,
+              likes: true,
+            },
           },
         },
-        _count: {
-          select: {
-            comments: true,
-            likes: true,
-          },
-        },
-      },
-    });
+      });
+
+    // ========================================
+    // CHECK POST
+    // ========================================
 
     if (!post) {
       throw new NotFoundException(
@@ -177,17 +290,29 @@ export class PostsService {
     return post;
   }
 
-  // Update own post
+  // ==========================================
+  // UPDATE OWN POST
+  // ==========================================
+
   async update(
     id: number,
     updatePostDto: UpdatePostDto,
     userId: number,
   ) {
-    const post = await this.prisma.post.findUnique({
-      where: {
-        id,
-      },
-    });
+    // ========================================
+    // FIND POST
+    // ========================================
+
+    const post =
+      await this.prisma.post.findUnique({
+        where: {
+          id,
+        },
+      });
+
+    // ========================================
+    // CHECK POST
+    // ========================================
 
     if (!post) {
       throw new NotFoundException(
@@ -195,47 +320,79 @@ export class PostsService {
       );
     }
 
-    if (post.authorId !== userId) {
+    // ========================================
+    // CHECK OWNERSHIP
+    // ========================================
+
+    if (
+      post.authorId !== userId
+    ) {
       throw new ForbiddenException(
         'You can only update your own post',
       );
     }
+
+    // ========================================
+    // UPDATE POST
+    // ========================================
 
     const updatedPost =
       await this.prisma.post.update({
         where: {
           id,
         },
+
         data: {
-          title: updatePostDto.title,
-          content: updatePostDto.content,
+          title:
+            updatePostDto.title,
+
+          content:
+            updatePostDto.content,
         },
+
         include: {
           author: {
             select: {
               id: true,
               name: true,
+
+              // Profile Image
+              profileImage: true,
             },
           },
         },
       });
 
     return {
-      message: 'Post updated successfully',
+      message:
+        'Post updated successfully',
+
       post: updatedPost,
     };
   }
 
-  // Delete own post
+  // ==========================================
+  // DELETE OWN POST
+  // ==========================================
+
   async remove(
     id: number,
     userId: number,
   ) {
-    const post = await this.prisma.post.findUnique({
-      where: {
-        id,
-      },
-    });
+    // ========================================
+    // FIND POST
+    // ========================================
+
+    const post =
+      await this.prisma.post.findUnique({
+        where: {
+          id,
+        },
+      });
+
+    // ========================================
+    // CHECK POST
+    // ========================================
 
     if (!post) {
       throw new NotFoundException(
@@ -243,11 +400,21 @@ export class PostsService {
       );
     }
 
-    if (post.authorId !== userId) {
+    // ========================================
+    // CHECK OWNERSHIP
+    // ========================================
+
+    if (
+      post.authorId !== userId
+    ) {
       throw new ForbiddenException(
         'You can only delete your own post',
       );
     }
+
+    // ========================================
+    // DELETE POST
+    // ========================================
 
     await this.prisma.post.delete({
       where: {
@@ -256,7 +423,8 @@ export class PostsService {
     });
 
     return {
-      message: 'Post deleted successfully',
+      message:
+        'Post deleted successfully',
     };
   }
 }

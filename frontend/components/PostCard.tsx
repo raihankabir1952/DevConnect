@@ -20,6 +20,7 @@ interface Post {
   author: {
     id: number;
     name: string;
+    profileImage: string | null;
   };
 
   _count: {
@@ -161,7 +162,7 @@ export default function PostCard({
       if (!response.ok) {
         throw new Error(
           data.message ||
-            'Failed to like post',
+          'Failed to like post',
         );
       }
 
@@ -266,7 +267,7 @@ export default function PostCard({
       if (!response.ok) {
         throw new Error(
           data.message ||
-            'Failed to update post',
+          'Failed to update post',
         );
       }
 
@@ -331,7 +332,7 @@ export default function PostCard({
       if (!response.ok) {
         throw new Error(
           data.message ||
-            'Failed to delete post',
+          'Failed to delete post',
         );
       }
 
@@ -375,11 +376,19 @@ export default function PostCard({
             {/* Avatar */}
             <Link
               href={`/profile/${post.author.id}`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-600 transition hover:bg-blue-200"
+              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600 transition hover:bg-blue-200"
             >
-              {post.author.name
-                .charAt(0)
-                .toUpperCase()}
+              {post.author.profileImage ? (
+                <img
+                  src={`http://localhost:3000${post.author.profileImage}`}
+                  alt={post.author.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                post.author.name
+                  .charAt(0)
+                  .toUpperCase()
+              )}
             </Link>
 
             {/* Name + Date */}
@@ -502,11 +511,10 @@ export default function PostCard({
           <button
             onClick={handleLike}
             disabled={loading}
-            className={`flex items-center gap-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
-              liked
+            className={`flex items-center gap-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${liked
                 ? 'text-red-500'
                 : 'text-gray-600 hover:text-red-500'
-            }`}
+              }`}
           >
             <span
               className={
