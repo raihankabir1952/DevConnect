@@ -1,124 +1,68 @@
-# DevConnect
+# DevConnect Backend
 
-DevConnect is a full-stack social networking platform where users can create accounts, share posts, interact with other users, and build connections through likes, comments, and follow relationships.
+The backend API for **DevConnect**, a full-stack developer social networking platform built with NestJS, PostgreSQL, Prisma, and JWT authentication.
+
+DevConnect allows developers to create posts, interact with other developers, comment, like, follow users, and manage their profiles.
 
 ---
 
 ## 🚀 Features
 
-### 🔐 Authentication
-
-- User registration
-- User login
-- JWT-based authentication
-- Password hashing with bcrypt
-- Protected API routes using JWT Guards
-- Access token management
-
-### 👤 User System
-
-- User profile pages
-- View user information
-- User profile statistics
-- Search users by name
-- Navigate from search results to user profiles
-
-### 📝 Post System
-
-- Create and view posts
-- Display post title and content
-- Display post author information
-- Display post creation date
-- View total likes and comments for each post
-
-### ❤️ Like System
-
-- Like posts
-- Unlike posts
-- Prevent duplicate likes using a unique database constraint
-- Track total likes for each post
-
-### 💬 Comment System
-
-- Add comments to posts
-- View comments
-- Display comment author information
-- Display comment creation date
-- Edit comments
-- Delete comments
-- Protected comment actions for authenticated users
-
-### 👥 Follow System
-
-- Follow other users
-- Unfollow users
-- Track followers
-- Track following
-- Display follower and following statistics
-- Prevent duplicate follow relationships using a unique database constraint
-
-### 👤 Profile System
-
-Each user has a dedicated profile page that displays:
-
-- User name
-- User email
-- User avatar
-- User posts
-- Total posts
-- Total comments
-- Total likes
-- Total followers
-- Total following
-
-Users can also follow or unfollow other users directly from their profile.
-
----
-
-## 🛠️ Technology Stack
-
-### Frontend
-
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-
-### Backend
-
-- NestJS
-- TypeScript
-- Prisma ORM
-- PostgreSQL
+- User Registration
+- User Login
 - JWT Authentication
-- Passport
-- bcrypt
-- RESTful API
-
-### Database
-
-- PostgreSQL
+- Protected API Routes
+- Password Hashing with bcrypt
+- Create Posts
+- Update Posts
+- Delete Posts
+- View Posts
+- User Profile
+- Profile Image Upload
+- Cover Image Upload
+- Comments
+- Likes
+- Follow / Unfollow Users
+- User Search
+- Post Pagination
+- Request Validation
 - Prisma ORM
+- PostgreSQL Database
 
 ---
 
-## 📂 Project Structure
+## 🛠️ Tech Stack
 
-### Frontend
+- **Node.js**
+- **NestJS**
+- **TypeScript**
+- **PostgreSQL**
+- **Prisma ORM**
+- **JWT**
+- **Passport**
+- **bcrypt**
+- **class-validator**
+- **class-transformer**
+
+---
+
+## 📁 Project Structure
 
 ```text
-app/
-├── page.tsx
-├── login/
-├── register/
-└── profile/
-    └── [id]/
-        └── page.tsx
+backend/
+├── prisma/
+├── src/
+│   ├── auth/
+│   ├── users/
+│   ├── posts/
+│   ├── comments/
+│   ├── likes/
+│   └── ...
+├── test/
+├── uploads/
+├── .env
+├── package.json
+├── prisma.config.ts
+└── README.md
 
-components/
-├── Navbar.tsx
-├── PostCard.tsx
-└── CommentSection.tsx
 
-
-## ⚙️ Backend
