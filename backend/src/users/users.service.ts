@@ -1,36 +1,19 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 
-import { v2 as cloudinary } from 'cloudinary';
-
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
-  ) {
-    // ==========================================
-    // CLOUDINARY CONFIGURATION
-    // ==========================================
-
-    cloudinary.config({
-      cloud_name:
-        process.env.CLOUDINARY_CLOUD_NAME,
-
-      api_key:
-        process.env.CLOUDINARY_API_KEY,
-
-      api_secret:
-        process.env.CLOUDINARY_API_SECRET,
-    });
-  }
+  ) {}
 
   // ==========================================
   // SEARCH USERS BY NAME
-  // GET /users/search?name=Raihan
   // ==========================================
 
   async searchUsers(name: string) {
@@ -56,7 +39,6 @@ export class UsersService {
 
   // ==========================================
   // GET USER PROFILE BY ID
-  // GET /users/:id
   // ==========================================
 
   async findOne(id: number) {
@@ -77,11 +59,7 @@ export class UsersService {
               posts: true,
               comments: true,
               likes: true,
-
-              // Followers
               followers: true,
-
-              // Following
               following: true,
             },
           },
@@ -98,82 +76,29 @@ export class UsersService {
   }
 
   // ==========================================
-  // UPLOAD PROFILE IMAGE
+  // UPDATE PROFILE IMAGE
   // ==========================================
 
-  async uploadProfileImage(
+  async updateProfileImage(
     userId: number,
     file: Express.Multer.File,
   ) {
-    // ==========================================
-    // CHECK USER EXISTS
-    // ==========================================
-
-    const user =
-      await this.prisma.user.findUnique({
-        where: {
-          id: userId,
-        },
-      });
-
-    if (!user) {
-      throw new NotFoundException(
-        'User not found',
+    if (!file) {
+      throw new BadRequestException(
+        'Profile image is required',
       );
     }
 
-    // ==========================================
-    // UPLOAD IMAGE TO CLOUDINARY
-    // ==========================================
+    // ========================================
+    // CREATE IMAGE URL
+    // ========================================
 
-    const uploadResult =
-      await new Promise<{
-        secure_url: string;
-      }>((resolve, reject) => {
-        const uploadStream =
-          cloudinary.uploader.upload_stream(
-            {
-              folder: 'devconnect/profile-images',
+    const imageUrl =
+      `/uploads/profile-images/${file.filename}`;
 
-              transformation: [
-                {
-                  width: 500,
-                  height: 500,
-                  crop: 'fill',
-                  gravity: 'face',
-                },
-              ],
-            },
-
-            (error, result) => {
-              if (error) {
-                reject(error);
-                return;
-              }
-
-              if (!result) {
-                reject(
-                  new Error(
-                    'Image upload failed',
-                  ),
-                );
-
-                return;
-              }
-
-              resolve({
-                secure_url:
-                  result.secure_url,
-              });
-            },
-          );
-
-        uploadStream.end(file.buffer);
-      });
-
-    // ==========================================
-    // SAVE IMAGE URL TO DATABASE
-    // ==========================================
+    // ========================================
+    // UPDATE USER
+    // ========================================
 
     const updatedUser =
       await this.prisma.user.update({
@@ -182,8 +107,7 @@ export class UsersService {
         },
 
         data: {
-          profileImage:
-            uploadResult.secure_url,
+          profileImage: imageUrl,
         },
 
         select: {
@@ -194,13 +118,9 @@ export class UsersService {
         },
       });
 
-    // ==========================================
-    // RETURN UPDATED USER
-    // ==========================================
-
     return {
       message:
-        'Profile image uploaded successfully',
+        'Profile image updated successfully',
 
       user: updatedUser,
     };

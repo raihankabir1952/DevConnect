@@ -2,12 +2,17 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import {
+  ChangeEvent,
+  useEffect,
+  useState,
+} from 'react';
 
 interface User {
   id: number;
   name: string;
   email: string;
+  profileImage: string | null;
 
   _count: {
     posts: number;
@@ -61,6 +66,15 @@ export default function ProfilePage() {
     useState(false);
 
   // ==========================================
+  // PROFILE IMAGE STATE
+  // ==========================================
+
+  const [
+    profileImageLoading,
+    setProfileImageLoading,
+  ] = useState(false);
+
+  // ==========================================
   // PAGE STATE
   // ==========================================
 
@@ -78,7 +92,7 @@ export default function ProfilePage() {
     useState<number | null>(null);
 
   // ==========================================
-  // GET CURRENT USER FROM LOCAL STORAGE
+  // GET CURRENT USER
   // ==========================================
 
   useEffect(() => {
@@ -119,7 +133,7 @@ export default function ProfilePage() {
         setError('');
 
         // ======================================
-        // FETCH USER PROFILE
+        // FETCH USER
         // ======================================
 
         const userResponse =
@@ -140,12 +154,20 @@ export default function ProfilePage() {
         }
 
         // ======================================
-        // NORMALIZE USER COUNT
-        // Prevent NaN / undefined
+        // NORMALIZE USER
         // ======================================
 
         const normalizedUser: User = {
-          ...userData,
+          id: Number(userData?.id) || 0,
+
+          name:
+            userData?.name || 'Unknown User',
+
+          email:
+            userData?.email || '',
+
+          profileImage:
+            userData?.profileImage || null,
 
           _count: {
             posts:
@@ -199,7 +221,7 @@ export default function ProfilePage() {
         }
 
         // ======================================
-        // HANDLE PAGINATED RESPONSE
+        // HANDLE PAGINATION
         // ======================================
 
         const allPosts: Post[] =
@@ -214,7 +236,8 @@ export default function ProfilePage() {
         const userPosts =
           allPosts.filter(
             (post: Post) =>
-              post.author?.id === userId,
+              Number(post.author?.id) ===
+              userId,
           );
 
         setPosts(userPosts);
@@ -236,6 +259,157 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, [userId]);
+
+  // ==========================================
+  // UPLOAD PROFILE IMAGE
+  // ==========================================
+
+  async function handleProfileImageChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file =
+      event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const token =
+      localStorage.getItem('accessToken');
+
+    if (!token) {
+      setError(
+        'Please login to upload profile picture.',
+      );
+
+      return;
+    }
+
+    // ========================================
+    // VALIDATE FILE TYPE
+    // ========================================
+
+    if (!file.type.startsWith('image/')) {
+      setError(
+        'Please select a valid image file.',
+      );
+
+      return;
+    }
+
+    // ========================================
+    // VALIDATE FILE SIZE
+    // ========================================
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError(
+        'Image size must be less than 5MB.',
+      );
+
+      return;
+    }
+
+    setProfileImageLoading(true);
+    setError('');
+
+    try {
+      const formData =
+        new FormData();
+
+      formData.append(
+        'profileImage',
+        file,
+      );
+
+      // ========================================
+      // SEND IMAGE TO BACKEND
+      // ========================================
+
+      const response =
+        await fetch(
+          'http://localhost:3000/users/profile-image',
+          {
+            method: 'PATCH',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+
+            body: formData,
+          },
+        );
+
+      const data =
+        await response.json().catch(
+          () => null,
+        );
+
+      console.log(
+        'Profile image upload response:',
+        data,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            'Failed to upload profile image',
+        );
+      }
+
+      // ========================================
+      // GET UPDATED IMAGE PATH
+      // ========================================
+
+      const updatedProfileImage =
+        data?.profileImage ||
+        data?.user?.profileImage ||
+        null;
+
+      if (updatedProfileImage) {
+        setUser(
+          (previousUser) => {
+            if (!previousUser) {
+              return previousUser;
+            }
+
+            return {
+              ...previousUser,
+
+              profileImage:
+                updatedProfileImage,
+            };
+          },
+        );
+      }
+
+      // ========================================
+      // SUCCESS MESSAGE
+      // ========================================
+
+      setError(
+        'Profile picture updated successfully!',
+      );
+
+      // ========================================
+      // CLEAR FILE INPUT
+      // ========================================
+
+      event.target.value = '';
+    } catch (error) {
+      console.error(
+        'Profile image upload error:',
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload profile image',
+      );
+    } finally {
+      setProfileImageLoading(false);
+    }
+  }
 
   // ==========================================
   // FOLLOW USER
@@ -274,11 +448,6 @@ export default function ProfilePage() {
           () => null,
         );
 
-      console.log(
-        'Follow API response:',
-        data,
-      );
-
       if (!response.ok) {
         throw new Error(
           data?.message ||
@@ -286,41 +455,28 @@ export default function ProfilePage() {
         );
       }
 
-      // ======================================
-      // UPDATE FOLLOW STATE
-      // ======================================
-
       setIsFollowing(true);
 
-      // ======================================
-      // UPDATE FOLLOWER COUNT
-      // ======================================
+      setUser(
+        (previousUser) => {
+          if (!previousUser) {
+            return previousUser;
+          }
 
-      setUser((previousUser) => {
-        if (!previousUser) {
-          return previousUser;
-        }
+          return {
+            ...previousUser,
 
-        const currentFollowers =
-          Number(
-            previousUser._count
-              ?.followers,
-          ) || 0;
+            _count: {
+              ...previousUser._count,
 
-        return {
-          ...previousUser,
-
-          _count: {
-            ...previousUser._count,
-
-            followers:
-              currentFollowers + 1,
-          },
-        };
-      });
-
-      console.log(
-        'Follow successful',
+              followers:
+                Number(
+                  previousUser._count
+                    .followers,
+                ) + 1,
+            },
+          };
+        },
       );
     } catch (error) {
       console.error(
@@ -375,11 +531,6 @@ export default function ProfilePage() {
           () => null,
         );
 
-      console.log(
-        'Unfollow API response:',
-        data,
-      );
-
       if (!response.ok) {
         throw new Error(
           data?.message ||
@@ -387,43 +538,30 @@ export default function ProfilePage() {
         );
       }
 
-      // ======================================
-      // UPDATE FOLLOW STATE
-      // ======================================
-
       setIsFollowing(false);
 
-      // ======================================
-      // UPDATE FOLLOWER COUNT
-      // ======================================
+      setUser(
+        (previousUser) => {
+          if (!previousUser) {
+            return previousUser;
+          }
 
-      setUser((previousUser) => {
-        if (!previousUser) {
-          return previousUser;
-        }
+          return {
+            ...previousUser,
 
-        const currentFollowers =
-          Number(
-            previousUser._count
-              ?.followers,
-          ) || 0;
+            _count: {
+              ...previousUser._count,
 
-        return {
-          ...previousUser,
-
-          _count: {
-            ...previousUser._count,
-
-            followers: Math.max(
-              0,
-              currentFollowers - 1,
-            ),
-          },
-        };
-      });
-
-      console.log(
-        'Unfollow successful',
+              followers: Math.max(
+                0,
+                Number(
+                  previousUser._count
+                    .followers,
+                ) - 1,
+              ),
+            },
+          };
+        },
       );
     } catch (error) {
       console.error(
@@ -521,6 +659,15 @@ export default function ProfilePage() {
     currentUserId === user.id;
 
   // ==========================================
+  // PROFILE IMAGE URL
+  // ==========================================
+
+  const profileImageUrl =
+    user.profileImage
+      ? `http://localhost:3000${user.profileImage}`
+      : null;
+
+  // ==========================================
   // RENDER
   // ==========================================
 
@@ -528,7 +675,9 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <main className="mx-auto max-w-4xl px-4 py-8">
 
+        {/* ====================================== */}
         {/* BACK BUTTON */}
+        {/* ====================================== */}
 
         <Link
           href="/"
@@ -537,29 +686,81 @@ export default function ProfilePage() {
           ← Back to Feed
         </Link>
 
+        {/* ====================================== */}
         {/* PROFILE CARD */}
+        {/* ====================================== */}
 
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
 
+          {/* ==================================== */}
           {/* COVER */}
+          {/* ==================================== */}
 
           <div className="h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
 
+          {/* ==================================== */}
           {/* PROFILE INFO */}
+          {/* ==================================== */}
 
           <div className="px-6 pb-6">
 
             <div className="-mt-12 flex flex-col items-start sm:flex-row sm:items-end sm:justify-between">
 
-              {/* AVATAR */}
+              {/* ================================= */}
+              {/* AVATAR + UPLOAD BUTTON */}
+              {/* ================================= */}
 
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-600 shadow-md">
-                {user.name
-                  .charAt(0)
-                  .toUpperCase()}
+              <div className="relative">
+
+                {/* PROFILE IMAGE */}
+
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-600 shadow-md">
+
+                  {profileImageUrl ? (
+                    <img
+                      src={profileImageUrl}
+                      alt={user.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    user.name
+                      .charAt(0)
+                      .toUpperCase()
+                  )}
+
+                </div>
+
+                {/* ================================= */}
+                {/* CAMERA / UPLOAD BUTTON */}
+                {/* ================================= */}
+
+                {isOwnProfile && (
+                  <label className="absolute bottom-0 right-0 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-blue-600 text-lg text-white shadow-md transition hover:bg-blue-700">
+
+                    {profileImageLoading
+                      ? '...'
+                      : '📷'}
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={
+                        profileImageLoading
+                      }
+                      onChange={
+                        handleProfileImageChange
+                      }
+                    />
+
+                  </label>
+                )}
+
               </div>
 
+              {/* ================================= */}
               {/* FOLLOW BUTTON */}
+              {/* ================================= */}
 
               {!isOwnProfile && (
                 <button
@@ -583,11 +784,15 @@ export default function ProfilePage() {
                       : 'Follow'}
                 </button>
               )}
+
             </div>
 
+            {/* ==================================== */}
             {/* USER DETAILS */}
+            {/* ==================================== */}
 
             <div className="mt-4">
+
               <h1 className="text-2xl font-bold text-gray-900">
                 {user.name}
               </h1>
@@ -595,17 +800,30 @@ export default function ProfilePage() {
               <p className="mt-1 text-sm text-gray-500">
                 {user.email}
               </p>
+
             </div>
 
-            {/* ERROR */}
+            {/* ==================================== */}
+            {/* MESSAGE */}
+            {/* ==================================== */}
 
             {error && (
-              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              <div
+                className={`mt-4 rounded-lg p-3 text-sm ${
+                  error.includes(
+                    'successfully',
+                  )
+                    ? 'bg-green-50 text-green-600'
+                    : 'bg-red-50 text-red-600'
+                }`}
+              >
                 {error}
               </div>
             )}
 
+            {/* ==================================== */}
             {/* USER STATS */}
+            {/* ==================================== */}
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
 
@@ -680,10 +898,13 @@ export default function ProfilePage() {
               </div>
 
             </div>
+
           </div>
         </div>
 
+        {/* ====================================== */}
         {/* USER POSTS */}
+        {/* ====================================== */}
 
         <div className="mt-8">
 
@@ -693,13 +914,16 @@ export default function ProfilePage() {
 
           {posts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+
               <p className="font-medium text-gray-700">
                 No posts yet
               </p>
 
               <p className="mt-2 text-sm text-gray-500">
-                This user hasn't shared any posts yet.
+                This user hasn't shared any
+                posts yet.
               </p>
+
             </div>
           ) : (
             <div className="space-y-5">
@@ -721,6 +945,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
+
                       <p className="font-semibold text-gray-900">
                         {post.author.name}
                       </p>
@@ -730,6 +955,7 @@ export default function ProfilePage() {
                           post.createdAt,
                         ).toLocaleDateString()}
                       </p>
+
                     </div>
 
                   </div>
@@ -777,6 +1003,7 @@ export default function ProfilePage() {
           )}
 
         </div>
+
       </main>
     </div>
   );
