@@ -17,6 +17,8 @@ interface User {
   name: string;
   email: string;
 
+  bio?: string | null;
+
   profileImage?: string | null;
   coverImage?: string | null;
 
@@ -101,6 +103,26 @@ function ProfilePageContent() {
 
   const coverImageInputRef =
     useRef<HTMLInputElement | null>(null);
+
+  // ==========================================
+  // EDIT PROFILE STATE
+  // ==========================================
+
+  const [
+    editProfileOpen,
+    setEditProfileOpen,
+  ] = useState(false);
+
+  const [editName, setEditName] =
+    useState('');
+
+  const [editBio, setEditBio] =
+    useState('');
+
+  const [
+    editProfileLoading,
+    setEditProfileLoading,
+  ] = useState(false);
 
   // ==========================================
   // PAGE STATE
@@ -190,6 +212,9 @@ function ProfilePageContent() {
 
         const normalizedUser: User = {
           ...userData,
+
+          bio:
+            userData?.bio || null,
 
           profileImage:
             userData?.profileImage || null,
@@ -286,6 +311,205 @@ function ProfilePageContent() {
 
     fetchProfile();
   }, [userId]);
+
+  // ==========================================
+  // OPEN EDIT PROFILE
+  // ==========================================
+
+  function handleOpenEditProfile() {
+    if (!user) {
+      return;
+    }
+
+    setEditName(user.name);
+    setEditBio(user.bio || '');
+    setError('');
+    setEditProfileOpen(true);
+  }
+
+  // ==========================================
+  // CLOSE EDIT PROFILE
+  // ==========================================
+
+  function handleCloseEditProfile() {
+    if (editProfileLoading) {
+      return;
+    }
+
+    setEditProfileOpen(false);
+  }
+
+  // ==========================================
+  // UPDATE PROFILE
+  // ==========================================
+
+  async function handleUpdateProfile(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    const token =
+      localStorage.getItem('accessToken');
+
+    if (!token) {
+      setError(
+        'Please login to update your profile.',
+      );
+
+      return;
+    }
+
+    const trimmedName =
+      editName.trim();
+
+    const trimmedBio =
+      editBio.trim();
+
+    // ========================================
+    // VALIDATE NAME
+    // ========================================
+
+    if (!trimmedName) {
+      setError(
+        'Name cannot be empty.',
+      );
+
+      return;
+    }
+
+    if (trimmedName.length > 50) {
+      setError(
+        'Name cannot be more than 50 characters.',
+      );
+
+      return;
+    }
+
+    // ========================================
+    // VALIDATE BIO
+    // ========================================
+
+    if (trimmedBio.length > 160) {
+      setError(
+        'Bio cannot be more than 160 characters.',
+      );
+
+      return;
+    }
+
+    setEditProfileLoading(true);
+    setError('');
+
+    try {
+      const response =
+        await fetch(
+          'http://localhost:3000/users/profile',
+          {
+            method: 'PATCH',
+
+            headers: {
+              'Content-Type':
+                'application/json',
+
+              Authorization:
+                `Bearer ${token}`,
+            },
+
+            body: JSON.stringify({
+              name: trimmedName,
+              bio: trimmedBio,
+            }),
+          },
+        );
+
+      const data =
+        await response.json().catch(
+          () => null,
+        );
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            'Failed to update profile',
+        );
+      }
+
+      // ========================================
+      // UPDATE PROFILE UI
+      // ========================================
+
+      if (data?.user) {
+        setUser(
+          (previousUser) => {
+            if (!previousUser) {
+              return previousUser;
+            }
+
+            return {
+              ...previousUser,
+
+              name:
+                data.user.name,
+
+              bio:
+                data.user.bio || null,
+            };
+          },
+        );
+
+        // ======================================
+        // UPDATE LOCAL STORAGE USER
+        // ======================================
+
+        const storedUser =
+          localStorage.getItem('user');
+
+        if (storedUser) {
+          try {
+            const parsedUser =
+              JSON.parse(storedUser);
+
+            localStorage.setItem(
+              'user',
+              JSON.stringify({
+                ...parsedUser,
+
+                name:
+                  data.user.name,
+
+                bio:
+                  data.user.bio || null,
+              }),
+            );
+          } catch (error) {
+            console.error(
+              'Failed to update local storage user:',
+              error,
+            );
+          }
+        }
+      }
+
+      // ========================================
+      // CLOSE MODAL
+      // ========================================
+
+      setEditProfileOpen(false);
+    } catch (error) {
+      console.error(
+        'Update profile error:',
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update profile',
+      );
+    } finally {
+      setEditProfileLoading(false);
+    }
+  }
 
   // ==========================================
   // PROFILE IMAGE UPLOAD
@@ -944,9 +1168,19 @@ function ProfilePageContent() {
                 )}
               </div>
 
-              {/* FOLLOW BUTTON */}
+              {/* FOLLOW / EDIT BUTTON */}
 
-              {!isOwnProfile && (
+              {isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={
+                    handleOpenEditProfile
+                  }
+                  className="mt-4 rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 sm:mt-0"
+                >
+                  ✏️ Edit Profile
+                </button>
+              ) : (
                 <button
                   type="button"
                   onClick={
@@ -982,6 +1216,14 @@ function ProfilePageContent() {
               <p className="mt-1 text-sm text-gray-500">
                 {user.email}
               </p>
+
+              {/* BIO */}
+
+              {user.bio && (
+                <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-gray-600">
+                  {user.bio}
+                </p>
+              )}
             </div>
 
             {/* ERROR */}
@@ -1164,7 +1406,174 @@ function ProfilePageContent() {
           )}
 
         </div>
+
       </main>
+
+      {/* =====================================================
+          EDIT PROFILE MODAL
+      ===================================================== */}
+
+      {editProfileOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+          onMouseDown={
+            handleCloseEditProfile
+          }
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            {/* MODAL HEADER */}
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Edit Profile
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Update your name and bio.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  handleCloseEditProfile
+                }
+                disabled={
+                  editProfileLoading
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* FORM */}
+
+            <form
+              onSubmit={
+                handleUpdateProfile
+              }
+              className="mt-6 space-y-5"
+            >
+
+              {/* NAME */}
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="profile-name"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Name
+                  </label>
+
+                  <span className="text-xs text-gray-400">
+                    {editName.length}/50
+                  </span>
+                </div>
+
+                <input
+                  id="profile-name"
+                  type="text"
+                  value={editName}
+                  onChange={(event) =>
+                    setEditName(
+                      event.target.value,
+                    )
+                  }
+                  maxLength={50}
+                  disabled={
+                    editProfileLoading
+                  }
+                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                  placeholder="Enter your name"
+                />
+              </div>
+
+              {/* BIO */}
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="profile-bio"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Bio
+                  </label>
+
+                  <span className="text-xs text-gray-400">
+                    {editBio.length}/160
+                  </span>
+                </div>
+
+                <textarea
+                  id="profile-bio"
+                  value={editBio}
+                  onChange={(event) =>
+                    setEditBio(
+                      event.target.value,
+                    )
+                  }
+                  maxLength={160}
+                  rows={4}
+                  disabled={
+                    editProfileLoading
+                  }
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                  placeholder="Tell people a little about yourself..."
+                />
+              </div>
+
+              {/* MODAL ERROR */}
+
+              {error && (
+                <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
+
+              {/* BUTTONS */}
+
+              <div className="flex justify-end gap-3 pt-2">
+
+                <button
+                  type="button"
+                  onClick={
+                    handleCloseEditProfile
+                  }
+                  disabled={
+                    editProfileLoading
+                  }
+                  className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={
+                    editProfileLoading
+                  }
+                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {editProfileLoading
+                    ? 'Saving...'
+                    : 'Save Changes'}
+                </button>
+
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

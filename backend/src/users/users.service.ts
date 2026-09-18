@@ -6,6 +6,8 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 
+import { UpdateProfileDto } from './dto/update-profile.dto';
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -38,6 +40,89 @@ export class UsersService {
   }
 
   // ==========================================
+  // UPDATE PROFILE
+  // NAME + BIO
+  // ==========================================
+
+  async updateProfile(
+    userId: number,
+    updateProfileDto: UpdateProfileDto,
+  ) {
+    const user =
+      await this.prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+      });
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found',
+      );
+    }
+
+    // ========================================
+    // TRIM VALUES
+    // ========================================
+
+    const name =
+      updateProfileDto.name?.trim();
+
+    const bio =
+      updateProfileDto.bio?.trim();
+
+    // ========================================
+    // VALIDATE NAME
+    // ========================================
+
+    if (
+      name !== undefined &&
+      name.length === 0
+    ) {
+      throw new BadRequestException(
+        'Name cannot be empty',
+      );
+    }
+
+    // ========================================
+    // UPDATE USER
+    // ========================================
+
+    const updatedUser =
+      await this.prisma.user.update({
+        where: {
+          id: userId,
+        },
+
+        data: {
+          ...(name !== undefined && {
+            name,
+          }),
+
+          ...(bio !== undefined && {
+            bio: bio || null,
+          }),
+        },
+
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          bio: true,
+          profileImage: true,
+          coverImage: true,
+        },
+      });
+
+    return {
+      message:
+        'Profile updated successfully',
+
+      user: updatedUser,
+    };
+  }
+
+  // ==========================================
   // GET USER PROFILE BY ID
   // ==========================================
 
@@ -52,6 +137,9 @@ export class UsersService {
           id: true,
           name: true,
           email: true,
+
+          // Bio
+          bio: true,
 
           // Profile Image
           profileImage: true,
@@ -119,6 +207,7 @@ export class UsersService {
           id: true,
           name: true,
           email: true,
+          bio: true,
           profileImage: true,
           coverImage: true,
         },
@@ -171,6 +260,7 @@ export class UsersService {
           id: true,
           name: true,
           email: true,
+          bio: true,
           profileImage: true,
           coverImage: true,
         },

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
@@ -24,6 +25,8 @@ import { UsersService } from './users.service';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+import { UpdateProfileDto } from './dto/update-profile.dto';
+
 @Controller('users')
 export class UsersController {
   constructor(
@@ -40,6 +43,26 @@ export class UsersController {
     @Query('name') name: string,
   ) {
     return this.usersService.searchUsers(name);
+  }
+
+  // ==========================================
+  // UPDATE PROFILE
+  // NAME + BIO
+  // PATCH /users/profile
+  // ==========================================
+
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(
+    @Req() req: any,
+
+    @Body()
+    updateProfileDto: UpdateProfileDto,
+  ) {
+    return this.usersService.updateProfile(
+      req.user.userId,
+      updateProfileDto,
+    );
   }
 
   // ==========================================
