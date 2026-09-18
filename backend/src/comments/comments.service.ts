@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -13,6 +14,7 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 export class CommentsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ==========================================
@@ -43,22 +45,37 @@ export class CommentsService {
     }
 
     // Create comment
-    return this.prisma.comment.create({
-      data: {
-        content,
-        postId,
-        userId,
-      },
+    const comment =
+      await this.prisma.comment.create({
+        data: {
+          content,
+          postId,
+          userId,
+        },
 
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-    });
+      });
+
+    // Create notification for post owner
+    // Don't notify yourself when commenting on your own post
+    if (post.authorId !== userId) {
+      await this.notificationsService.createNotification({
+        userId: post.authorId,
+        actorId: userId,
+        postId,
+        type: 'COMMENT',
+        message: 'commented on your post',
+      });
+    }
+
+    return comment;
   }
 
   // ==========================================
