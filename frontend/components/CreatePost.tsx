@@ -1,8 +1,9 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-
-import { apiRequest } from '@/lib/api';
+import {
+  FormEvent,
+  useState,
+} from 'react';
 
 interface CreatePostProps {
   onPostCreated: () => void;
@@ -14,8 +15,46 @@ export default function CreatePost({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  // Post image
+  const [image, setImage] =
+    useState<File | null>(null);
+
+  const [imagePreview, setImagePreview] =
+    useState('');
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState('');
+
+  // ==========================================
+  // IMAGE SELECT
+  // ==========================================
+
+  function handleImageChange(
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      setImage(null);
+      setImagePreview('');
+      return;
+    }
+
+    setImage(file);
+
+    // Create preview
+    const previewUrl =
+      URL.createObjectURL(file);
+
+    setImagePreview(previewUrl);
+  }
+
+  // ==========================================
+  // CREATE POST
+  // ==========================================
 
   async function handleSubmit(
     e: FormEvent<HTMLFormElement>,
@@ -25,29 +64,85 @@ export default function CreatePost({
     setError('');
 
     const token =
-      localStorage.getItem('accessToken');
+      localStorage.getItem(
+        'accessToken',
+      );
 
     if (!token) {
-      setError('Please login first.');
+      setError(
+        'Please login first.',
+      );
       return;
     }
 
     setLoading(true);
 
     try {
-      await apiRequest('/posts', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title,
-          content,
-        }),
-      });
+      // ========================================
+      // FORM DATA
+      // ========================================
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        'title',
+        title,
+      );
+
+      formData.append(
+        'content',
+        content,
+      );
+
+      // Image is optional
+      if (image) {
+        formData.append(
+          'image',
+          image,
+        );
+      }
+
+      // ========================================
+      // API REQUEST
+      // ========================================
+
+      const response =
+        await fetch(
+          'http://localhost:3000/posts',
+          {
+            method: 'POST',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+
+            body: formData,
+          },
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            'Failed to create post',
+        );
+      }
+
+      // ========================================
+      // RESET FORM
+      // ========================================
 
       setTitle('');
       setContent('');
+      setImage(null);
+      setImagePreview('');
+
+      // ========================================
+      // REFRESH POSTS
+      // ========================================
 
       onPostCreated();
     } catch (error) {
@@ -67,6 +162,7 @@ export default function CreatePost({
         Create a Post
       </h2>
 
+      {/* Error */}
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
           {error}
@@ -77,6 +173,7 @@ export default function CreatePost({
         onSubmit={handleSubmit}
         className="space-y-4"
       >
+        {/* Title */}
         <input
           type="text"
           placeholder="Post title..."
@@ -88,6 +185,7 @@ export default function CreatePost({
           required
         />
 
+        {/* Content */}
         <textarea
           placeholder="What's on your mind?"
           value={content}
@@ -99,6 +197,50 @@ export default function CreatePost({
           required
         />
 
+        {/* Image Upload */}
+        <div>
+          <label
+            htmlFor="post-image"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            Add Image{' '}
+            <span className="font-normal text-gray-400">
+              (Optional)
+            </span>
+          </label>
+
+          <input
+            id="post-image"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="block w-full cursor-pointer rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm text-gray-600"
+          />
+        </div>
+
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="relative overflow-hidden rounded-xl border border-gray-200">
+            <img
+              src={imagePreview}
+              alt="Post preview"
+              className="max-h-80 w-full object-cover"
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setImage(null);
+                setImagePreview('');
+              }}
+              className="absolute right-2 top-2 rounded-full bg-black/70 px-3 py-1 text-sm text-white transition hover:bg-black"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+
+        {/* Submit */}
         <div className="flex justify-end">
           <button
             type="submit"

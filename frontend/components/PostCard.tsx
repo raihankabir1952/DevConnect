@@ -13,6 +13,7 @@ interface Post {
   id: number;
   title: string;
   content: string;
+  image: string | null;
   createdAt: string;
   updatedAt: string;
   authorId: number;
@@ -131,7 +132,6 @@ export default function PostCard({
     const token =
       localStorage.getItem('accessToken');
 
-    // Check login
     if (!token) {
       setError(
         'Please login to like a post.',
@@ -141,7 +141,6 @@ export default function PostCard({
     }
 
     setLoading(true);
-
     setError('');
 
     try {
@@ -162,7 +161,7 @@ export default function PostCard({
       if (!response.ok) {
         throw new Error(
           data.message ||
-          'Failed to like post',
+            'Failed to like post',
         );
       }
 
@@ -238,7 +237,6 @@ export default function PostCard({
     }
 
     setLoading(true);
-
     setError('');
 
     try {
@@ -267,7 +265,7 @@ export default function PostCard({
       if (!response.ok) {
         throw new Error(
           data.message ||
-          'Failed to update post',
+            'Failed to update post',
         );
       }
 
@@ -311,7 +309,6 @@ export default function PostCard({
     }
 
     setLoading(true);
-
     setError('');
 
     try {
@@ -332,7 +329,7 @@ export default function PostCard({
       if (!response.ok) {
         throw new Error(
           data.message ||
-          'Failed to delete post',
+            'Failed to delete post',
         );
       }
 
@@ -430,7 +427,9 @@ export default function PostCard({
                   {/* Edit */}
                   <button
                     onClick={() => {
-                      setShowEditModal(true);
+                      setShowEditModal(
+                        true,
+                      );
 
                       setShowMenu(false);
 
@@ -489,6 +488,20 @@ export default function PostCard({
           <p className="mt-2 whitespace-pre-wrap leading-7 text-gray-600">
             {post.content}
           </p>
+
+          {/* ================================= */}
+          {/* POST IMAGE */}
+          {/* ================================= */}
+
+          {post.image && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
+              <img
+                src={`http://localhost:3000${post.image}`}
+                alt={post.title}
+                className="max-h-[500px] w-full object-cover"
+              />
+            </div>
+          )}
         </div>
 
         {/* ================================= */}
@@ -511,10 +524,11 @@ export default function PostCard({
           <button
             onClick={handleLike}
             disabled={loading}
-            className={`flex items-center gap-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${liked
+            className={`flex items-center gap-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              liked
                 ? 'text-red-500'
                 : 'text-gray-600 hover:text-red-500'
-              }`}
+            }`}
           >
             <span
               className={

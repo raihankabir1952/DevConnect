@@ -17,18 +17,40 @@ export class PostsService {
 
   // ==========================================
   // CREATE A NEW POST
+  // TEXT + OPTIONAL IMAGE
   // ==========================================
 
   async create(
     createPostDto: CreatePostDto,
     userId: number,
+    file?: Express.Multer.File,
   ) {
+    // ========================================
+    // CREATE IMAGE URL
+    // ========================================
+
+    const imageUrl = file
+      ? `/uploads/post-images/${file.filename}`
+      : null;
+
+    // ========================================
+    // CREATE POST
+    // ========================================
+
     const post =
       await this.prisma.post.create({
         data: {
-          title: createPostDto.title,
-          content: createPostDto.content,
-          authorId: userId,
+          title:
+            createPostDto.title,
+
+          content:
+            createPostDto.content,
+
+          image:
+            imageUrl,
+
+          authorId:
+            userId,
         },
 
         include: {
@@ -151,8 +173,7 @@ export class PostsService {
               id: true,
               name: true,
 
-              // IMPORTANT
-              // Return profile image
+              // Profile Image
               profileImage: true,
             },
           },
@@ -367,7 +388,8 @@ export class PostsService {
       message:
         'Post updated successfully',
 
-      post: updatedPost,
+      post:
+        updatedPost,
     };
   }
 
