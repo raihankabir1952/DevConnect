@@ -13,11 +13,14 @@ interface Comment {
   createdAt: string;
   userId: number;
   postId: number;
+  parentId: number | null;
 
   user: {
     id: number;
     name: string;
   };
+
+  replies: Comment[];
 }
 
 interface CommentSectionProps {
@@ -49,18 +52,40 @@ export default function CommentSection({
   const [error, setError] =
     useState('');
 
-  // Edit comment
+  // ==========================================
+  // EDIT COMMENT / REPLY
+  // ==========================================
+
   const [editingCommentId, setEditingCommentId] =
     useState<number | null>(null);
 
   const [editContent, setEditContent] =
     useState('');
 
-  // Delete comment
+  // ==========================================
+  // DELETE COMMENT / REPLY
+  // ==========================================
+
   const [deletingCommentId, setDeletingCommentId] =
     useState<number | null>(null);
 
-  // Logged-in user ID
+  // ==========================================
+  // REPLY
+  // ==========================================
+
+  const [replyingCommentId, setReplyingCommentId] =
+    useState<number | null>(null);
+
+  const [replyContent, setReplyContent] =
+    useState('');
+
+  const [replyLoading, setReplyLoading] =
+    useState(false);
+
+  // ==========================================
+  // LOGGED-IN USER
+  // ==========================================
+
   const [currentUserId, setCurrentUserId] =
     useState<number | null>(null);
 
@@ -230,10 +255,8 @@ export default function CommentSection({
         data,
       );
 
-      // Clear input
       setContent('');
 
-      // Refresh comments
       await fetchComments();
     } catch (error) {
       console.error(
@@ -248,6 +271,99 @@ export default function CommentSection({
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  // ==========================================
+  // CREATE REPLY
+  // POST /comments
+  // ==========================================
+
+  async function handleReply(
+    e: FormEvent<HTMLFormElement>,
+    parentId: number,
+  ) {
+    e.preventDefault();
+
+    if (!replyContent.trim()) {
+      return;
+    }
+
+    const token =
+      localStorage.getItem(
+        'accessToken',
+      );
+
+    if (!token) {
+      setError(
+        'Please login to reply.',
+      );
+
+      return;
+    }
+
+    setReplyLoading(true);
+
+    setError('');
+
+    try {
+      const response = await fetch(
+        'http://localhost:3000/comments',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json',
+
+            Authorization:
+              `Bearer ${token}`,
+          },
+
+          body: JSON.stringify({
+            content:
+              replyContent.trim(),
+
+            postId: postId,
+
+            parentId: parentId,
+          }),
+        },
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            'Failed to add reply',
+        );
+      }
+
+      console.log(
+        'Reply created:',
+        data,
+      );
+
+      setReplyContent('');
+
+      setReplyingCommentId(null);
+
+      await fetchComments();
+    } catch (error) {
+      console.error(
+        'Create reply error:',
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to add reply',
+      );
+    } finally {
+      setReplyLoading(false);
     }
   }
 
@@ -282,7 +398,7 @@ export default function CommentSection({
   }
 
   // ==========================================
-  // UPDATE COMMENT
+  // UPDATE COMMENT / REPLY
   // PATCH /comments/:id
   // ==========================================
 
@@ -358,12 +474,10 @@ export default function CommentSection({
         data,
       );
 
-      // Close edit mode
       setEditingCommentId(null);
 
       setEditContent('');
 
-      // Refresh comments
       await fetchComments();
     } catch (error) {
       console.error(
@@ -382,7 +496,7 @@ export default function CommentSection({
   }
 
   // ==========================================
-  // DELETE COMMENT
+  // DELETE COMMENT / REPLY
   // DELETE /comments/:id
   // ==========================================
 
@@ -445,15 +559,9 @@ export default function CommentSection({
         data,
       );
 
-      // Remove comment from UI
-      setComments(
-        (previousComments) =>
-          previousComments.filter(
-            (comment) =>
-              comment.id !==
-              commentId,
-          ),
-      );
+      // Refetch because the deleted item
+      // can be either a comment or a reply.
+      await fetchComments();
     } catch (error) {
       console.error(
         'Delete comment error:',
@@ -560,7 +668,7 @@ export default function CommentSection({
               comments.map(
                 (comment) => {
                   // =================================
-                  // CHECK COMMENT OWNER
+                  // COMMENT OWNER
                   // =================================
 
                   const isCommentOwner =
@@ -570,16 +678,6 @@ export default function CommentSection({
                     Number(
                       comment.userId,
                     );
-
-                  console.log(
-                    'Comment ownership:',
-                    {
-                      currentUserId,
-                      commentUserId:
-                        comment.userId,
-                      isCommentOwner,
-                    },
-                  );
 
                   const isEditing =
                     editingCommentId ===
@@ -706,44 +804,303 @@ export default function CommentSection({
                               </p>
 
                               {/* ================================= */}
-                              {/* EDIT + DELETE */}
+                              {/* REPLY */}
+                              {/* ================================= */}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReplyingCommentId(
+                                    replyingCommentId ===
+                                      comment.id
+                                      ? null
+                                      : comment.id,
+                                  );
+
+                                  setReplyContent(
+                                    '',
+                                  );
+
+                                  setError('');
+                                }}
+                                className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
+                              >
+                                Reply
+                              </button>
+
+                              {/* ================================= */}
+                              {/* EDIT */}
                               {/* ================================= */}
 
                               {isCommentOwner && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleStartEdit(
-                                        comment,
-                                      )
-                                    }
-                                    className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
-                                  >
-                                    Edit
-                                  </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleStartEdit(
+                                      comment,
+                                    )
+                                  }
+                                  className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
+                                >
+                                  Edit
+                                </button>
+                              )}
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleDeleteComment(
-                                        comment.id,
-                                      )
-                                    }
-                                    disabled={
-                                      deletingCommentId ===
-                                      comment.id
-                                    }
-                                    className="text-xs font-semibold text-gray-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    {deletingCommentId ===
+                              {/* ================================= */}
+                              {/* DELETE */}
+                              {/* ================================= */}
+
+                              {isCommentOwner && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteComment(
+                                      comment.id,
+                                    )
+                                  }
+                                  disabled={
+                                    deletingCommentId ===
                                     comment.id
-                                      ? 'Deleting...'
-                                      : 'Delete'}
-                                  </button>
-                                </>
+                                  }
+                                  className="text-xs font-semibold text-gray-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {deletingCommentId ===
+                                  comment.id
+                                    ? 'Deleting...'
+                                    : 'Delete'}
+                                </button>
                               )}
                             </div>
+
+                            {/* ================================= */}
+                            {/* REPLY FORM */}
+                            {/* ================================= */}
+
+                            {replyingCommentId ===
+                              comment.id && (
+                              <form
+                                onSubmit={(e) =>
+                                  handleReply(
+                                    e,
+                                    comment.id,
+                                  )
+                                }
+                                className="mt-3 ml-3 flex gap-2"
+                              >
+                                <input
+                                  type="text"
+                                  value={
+                                    replyContent
+                                  }
+                                  onChange={(
+                                    e,
+                                  ) =>
+                                    setReplyContent(
+                                      e.target
+                                        .value,
+                                    )
+                                  }
+                                  placeholder="Write a reply..."
+                                  autoFocus
+                                  className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                />
+
+                                <button
+                                  type="submit"
+                                  disabled={
+                                    replyLoading ||
+                                    !replyContent.trim()
+                                  }
+                                  className="rounded-full bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {replyLoading
+                                    ? 'Replying...'
+                                    : 'Reply'}
+                                </button>
+                              </form>
+                            )}
+
+                            {/* ================================= */}
+                            {/* REPLIES */}
+                            {/* ================================= */}
+
+                            {comment.replies &&
+                              comment.replies.length >
+                                0 && (
+                                <div className="mt-4 ml-8 space-y-4 border-l-2 border-gray-100 pl-4">
+                                  {comment.replies.map(
+                                    (reply) => {
+                                      const isReplyOwner =
+                                        Number(
+                                          currentUserId,
+                                        ) ===
+                                        Number(
+                                          reply.userId,
+                                        );
+
+                                      const isReplyEditing =
+                                        editingCommentId ===
+                                        reply.id;
+
+                                      return (
+                                        <div
+                                          key={
+                                            reply.id
+                                          }
+                                          className="flex gap-3"
+                                        >
+                                          {/* Reply Avatar */}
+
+                                          <Link
+                                            href={`/profile/${reply.user.id}`}
+                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
+                                          >
+                                            {reply.user.name
+                                              .charAt(
+                                                0,
+                                              )
+                                              .toUpperCase()}
+                                          </Link>
+
+                                          {/* Reply Body */}
+
+                                          <div className="min-w-0 flex-1">
+                                            {isReplyEditing ? (
+                                              /* ===================== */
+                                              /* EDIT REPLY */
+                                              /* ===================== */
+
+                                              <form
+                                                onSubmit={
+                                                  handleUpdateComment
+                                                }
+                                                className="space-y-2"
+                                              >
+                                                <textarea
+                                                  value={
+                                                    editContent
+                                                  }
+                                                  onChange={(
+                                                    e,
+                                                  ) =>
+                                                    setEditContent(
+                                                      e
+                                                        .target
+                                                        .value,
+                                                    )
+                                                  }
+                                                  rows={
+                                                    2
+                                                  }
+                                                  autoFocus
+                                                  className="w-full resize-none rounded-xl border border-blue-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-100"
+                                                />
+
+                                                <div className="flex gap-2">
+                                                  <button
+                                                    type="submit"
+                                                    disabled={
+                                                      loading ||
+                                                      !editContent.trim()
+                                                    }
+                                                    className="rounded-full bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                  >
+                                                    {loading
+                                                      ? 'Saving...'
+                                                      : 'Save'}
+                                                  </button>
+
+                                                  <button
+                                                    type="button"
+                                                    onClick={
+                                                      handleCancelEdit
+                                                    }
+                                                    className="rounded-full bg-gray-100 px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-200"
+                                                  >
+                                                    Cancel
+                                                  </button>
+                                                </div>
+                                              </form>
+                                            ) : (
+                                              <>
+                                                {/* Reply Bubble */}
+
+                                                <div className="inline-block max-w-full rounded-2xl bg-gray-50 px-4 py-2.5">
+                                                  <Link
+                                                    href={`/profile/${reply.user.id}`}
+                                                    className="text-xs font-semibold text-gray-900 transition hover:text-blue-600"
+                                                  >
+                                                    {
+                                                      reply
+                                                        .user
+                                                        .name
+                                                    }
+                                                  </Link>
+
+                                                  <p className="mt-1 break-words text-sm text-gray-600">
+                                                    {
+                                                      reply.content
+                                                    }
+                                                  </p>
+                                                </div>
+
+                                                {/* Reply Date + Actions */}
+
+                                                <div className="mt-1 ml-3 flex items-center gap-3">
+                                                  <p className="text-xs text-gray-400">
+                                                    {new Date(
+                                                      reply.createdAt,
+                                                    ).toLocaleDateString()}
+                                                  </p>
+
+                                                  {/* Edit Reply */}
+
+                                                  {isReplyOwner && (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        handleStartEdit(
+                                                          reply,
+                                                        )
+                                                      }
+                                                      className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
+                                                    >
+                                                      Edit
+                                                    </button>
+                                                  )}
+
+                                                  {/* Delete Reply */}
+
+                                                  {isReplyOwner && (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        handleDeleteComment(
+                                                          reply.id,
+                                                        )
+                                                      }
+                                                      disabled={
+                                                        deletingCommentId ===
+                                                        reply.id
+                                                      }
+                                                      className="text-xs font-semibold text-gray-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                      {deletingCommentId ===
+                                                      reply.id
+                                                        ? 'Deleting...'
+                                                        : 'Delete'}
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    },
+                                  )}
+                                </div>
+                              )}
                           </>
                         )}
                       </div>

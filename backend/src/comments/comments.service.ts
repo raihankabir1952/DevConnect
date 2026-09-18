@@ -18,7 +18,7 @@ export class CommentsService {
   ) {}
 
   // ==========================================
-  // CREATE COMMENT
+  // CREATE COMMENT / REPLY
   // ==========================================
 
   async createComment(
@@ -28,6 +28,7 @@ export class CommentsService {
     const {
       content,
       postId,
+      parentId,
     } = createCommentDto;
 
     // Check if post exists
@@ -44,13 +45,54 @@ export class CommentsService {
       );
     }
 
-    // Create comment
+    // ==========================================
+    // CHECK PARENT COMMENT
+    // ==========================================
+
+    let parentComment:
+      | {
+          id: number;
+          content: string;
+          createdAt: Date;
+          userId: number;
+          postId: number;
+          parentId: number | null;
+        }
+      | null = null;
+
+    if (parentId) {
+      parentComment =
+        await this.prisma.comment.findUnique({
+          where: {
+            id: parentId,
+          },
+        });
+
+      if (!parentComment) {
+        throw new NotFoundException(
+          'Parent comment not found',
+        );
+      }
+
+      // Make sure parent comment belongs to the same post
+      if (parentComment.postId !== postId) {
+        throw new NotFoundException(
+          'Parent comment does not belong to this post',
+        );
+      }
+    }
+
+    // ==========================================
+    // CREATE COMMENT / REPLY
+    // ==========================================
+
     const comment =
       await this.prisma.comment.create({
         data: {
           content,
           postId,
           userId,
+          parentId: parentId ?? null,
         },
 
         include: {
@@ -63,16 +105,34 @@ export class CommentsService {
         },
       });
 
-    // Create notification for post owner
-    // Don't notify yourself when commenting on your own post
-    if (post.authorId !== userId) {
-      await this.notificationsService.createNotification({
-        userId: post.authorId,
-        actorId: userId,
-        postId,
-        type: 'COMMENT',
-        message: 'commented on your post',
-      });
+    // ==========================================
+    // NOTIFICATION
+    // ==========================================
+
+    if (parentComment) {
+      // Reply notification
+      // Don't notify yourself
+      if (parentComment.userId !== userId) {
+        await this.notificationsService.createNotification({
+          userId: parentComment.userId,
+          actorId: userId,
+          postId,
+          type: 'REPLY',
+          message: 'replied to your comment',
+        });
+      }
+    } else {
+      // Normal comment notification
+      // Don't notify yourself
+      if (post.authorId !== userId) {
+        await this.notificationsService.createNotification({
+          userId: post.authorId,
+          actorId: userId,
+          postId,
+          type: 'COMMENT',
+          message: 'commented on your post',
+        });
+      }
     }
 
     return comment;
@@ -94,6 +154,21 @@ export class CommentsService {
             select: {
               id: true,
               name: true,
+            },
+          },
+
+          replies: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+
+            orderBy: {
+              createdAt: 'asc',
             },
           },
         },
