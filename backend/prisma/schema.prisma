@@ -11,8 +11,19 @@ model User {
   name      String
   email     String   @unique
   password  String
+
+  // Email Verification
+  emailVerified              Boolean   @default(false)
+  emailVerificationTokenHash String?
+  emailVerificationExpiresAt DateTime?
+
+  // Password Reset
+  passwordResetTokenHash     String?
+  passwordResetExpiresAt     DateTime?
+
   profileImage String?
   coverImage   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

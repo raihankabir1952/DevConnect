@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+
 import {
   ChangeEvent,
   useEffect,
   useRef,
   useState,
 } from 'react';
+
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 interface User {
   id: number;
@@ -44,7 +47,13 @@ interface Post {
   };
 }
 
-export default function ProfilePage() {
+/*
+|--------------------------------------------------------------------------
+| PROFILE PAGE CONTENT
+|--------------------------------------------------------------------------
+*/
+
+function ProfilePageContent() {
   const params = useParams();
 
   const userId = Number(params.id);
@@ -73,8 +82,10 @@ export default function ProfilePage() {
   // PROFILE IMAGE STATE
   // ==========================================
 
-  const [profileImageLoading, setProfileImageLoading] =
-    useState(false);
+  const [
+    profileImageLoading,
+    setProfileImageLoading,
+  ] = useState(false);
 
   const profileImageInputRef =
     useRef<HTMLInputElement | null>(null);
@@ -83,8 +94,10 @@ export default function ProfilePage() {
   // COVER IMAGE STATE
   // ==========================================
 
-  const [coverImageLoading, setCoverImageLoading] =
-    useState(false);
+  const [
+    coverImageLoading,
+    setCoverImageLoading,
+  ] = useState(false);
 
   const coverImageInputRef =
     useRef<HTMLInputElement | null>(null);
@@ -107,7 +120,7 @@ export default function ProfilePage() {
     useState<number | null>(null);
 
   // ==========================================
-  // GET CURRENT USER FROM LOCAL STORAGE
+  // GET CURRENT USER
   // ==========================================
 
   useEffect(() => {
@@ -167,7 +180,7 @@ export default function ProfilePage() {
         if (!userResponse.ok) {
           throw new Error(
             userData?.message ||
-            'Failed to fetch user profile',
+              'Failed to fetch user profile',
           );
         }
 
@@ -231,7 +244,7 @@ export default function ProfilePage() {
         if (!postsResponse.ok) {
           throw new Error(
             postsData?.message ||
-            'Failed to fetch posts',
+              'Failed to fetch posts',
           );
         }
 
@@ -299,7 +312,6 @@ export default function ProfilePage() {
       return;
     }
 
-    // Only image
     if (!file.type.startsWith('image/')) {
       setError(
         'Only image files are allowed.',
@@ -308,7 +320,6 @@ export default function ProfilePage() {
       return;
     }
 
-    // Maximum 5 MB
     if (file.size > 5 * 1024 * 1024) {
       setError(
         'Image size must be less than 5 MB.',
@@ -324,8 +335,6 @@ export default function ProfilePage() {
       const formData =
         new FormData();
 
-      // IMPORTANT:
-      // Backend uses FileInterceptor('file')
       formData.append(
         'file',
         file,
@@ -353,13 +362,9 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-          'Failed to upload profile image',
+            'Failed to upload profile image',
         );
       }
-
-      // ======================================
-      // UPDATE USER STATE
-      // ======================================
 
       if (data?.user) {
         setUser(
@@ -379,10 +384,6 @@ export default function ProfilePage() {
         );
       }
 
-      // ======================================
-      // UPDATE LOCAL STORAGE USER
-      // ======================================
-
       const storedUser =
         localStorage.getItem('user');
 
@@ -395,6 +396,7 @@ export default function ProfilePage() {
             'user',
             JSON.stringify({
               ...parsedUser,
+
               profileImage:
                 data.user.profileImage,
             }),
@@ -420,7 +422,6 @@ export default function ProfilePage() {
     } finally {
       setProfileImageLoading(false);
 
-      // Reset input
       if (
         profileImageInputRef.current
       ) {
@@ -455,7 +456,6 @@ export default function ProfilePage() {
       return;
     }
 
-    // Only image
     if (!file.type.startsWith('image/')) {
       setError(
         'Only image files are allowed.',
@@ -464,7 +464,6 @@ export default function ProfilePage() {
       return;
     }
 
-    // Maximum 5 MB
     if (file.size > 5 * 1024 * 1024) {
       setError(
         'Cover image size must be less than 5 MB.',
@@ -480,8 +479,6 @@ export default function ProfilePage() {
       const formData =
         new FormData();
 
-      // IMPORTANT:
-      // Backend uses FileInterceptor('file')
       formData.append(
         'file',
         file,
@@ -509,13 +506,9 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-          'Failed to upload cover image',
+            'Failed to upload cover image',
         );
       }
-
-      // ======================================
-      // UPDATE USER STATE
-      // ======================================
 
       if (data?.user) {
         setUser(
@@ -548,7 +541,6 @@ export default function ProfilePage() {
     } finally {
       setCoverImageLoading(false);
 
-      // Reset input
       if (
         coverImageInputRef.current
       ) {
@@ -598,7 +590,7 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-          'Failed to follow user',
+            'Failed to follow user',
         );
       }
 
@@ -681,7 +673,7 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error(
           data?.message ||
-          'Failed to unfollow user',
+            'Failed to unfollow user',
         );
       }
 
@@ -827,9 +819,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <main className="mx-auto max-w-4xl px-4 py-8">
 
-        {/* ====================================== */}
         {/* BACK BUTTON */}
-        {/* ====================================== */}
 
         <Link
           href="/"
@@ -838,21 +828,18 @@ export default function ProfilePage() {
           ← Back to Feed
         </Link>
 
-        {/* ====================================== */}
         {/* PROFILE CARD */}
-        {/* ====================================== */}
 
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
 
-          {/* ==================================== */}
           {/* COVER PHOTO */}
-          {/* ==================================== */}
 
           <div
-            className={`relative h-48 sm:h-56 ${coverImageUrl
+            className={`relative h-48 sm:h-56 ${
+              coverImageUrl
                 ? 'bg-gray-200'
                 : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
-              }`}
+            }`}
           >
             {coverImageUrl && (
               <img
@@ -862,7 +849,7 @@ export default function ProfilePage() {
               />
             )}
 
-            {/* Change Cover Button */}
+            {/* CHANGE COVER */}
 
             {isOwnProfile && (
               <>
@@ -898,17 +885,13 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* ==================================== */}
           {/* PROFILE INFO */}
-          {/* ==================================== */}
 
           <div className="px-6 pb-6">
 
             <div className="-mt-12 flex flex-col items-start sm:flex-row sm:items-end sm:justify-between">
 
-              {/* ================================= */}
               {/* PROFILE IMAGE */}
-              {/* ================================= */}
 
               <div className="relative">
 
@@ -926,7 +909,7 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {/* Change Profile Picture */}
+                {/* CHANGE PROFILE IMAGE */}
 
                 {isOwnProfile && (
                   <>
@@ -961,9 +944,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* ================================= */}
               {/* FOLLOW BUTTON */}
-              {/* ================================= */}
 
               {!isOwnProfile && (
                 <button
@@ -976,10 +957,11 @@ export default function ProfilePage() {
                   disabled={
                     followLoading
                   }
-                  className={`mt-4 rounded-full px-6 py-2.5 text-sm font-semibold transition sm:mt-0 ${isFollowing
+                  className={`mt-4 rounded-full px-6 py-2.5 text-sm font-semibold transition sm:mt-0 ${
+                    isFollowing
                       ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
-                    } disabled:cursor-not-allowed disabled:opacity-50`}
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   {followLoading
                     ? 'Please wait...'
@@ -990,9 +972,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* ================================= */}
             {/* USER DETAILS */}
-            {/* ================================= */}
 
             <div className="mt-4">
               <h1 className="text-2xl font-bold text-gray-900">
@@ -1004,9 +984,7 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            {/* ================================= */}
             {/* ERROR */}
-            {/* ================================= */}
 
             {error && (
               <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
@@ -1014,13 +992,9 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* ================================= */}
             {/* USER STATS */}
-            {/* ================================= */}
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-
-              {/* Posts */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -1034,8 +1008,6 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Followers */}
-
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
                   {Number(
@@ -1047,8 +1019,6 @@ export default function ProfilePage() {
                   Followers
                 </p>
               </div>
-
-              {/* Following */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -1062,8 +1032,6 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Comments */}
-
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
                   {Number(
@@ -1075,8 +1043,6 @@ export default function ProfilePage() {
                   Comments
                 </p>
               </div>
-
-              {/* Likes */}
 
               <div className="rounded-2xl bg-gray-50 p-4 text-center">
                 <p className="text-xl font-bold text-gray-900">
@@ -1094,9 +1060,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ====================================== */}
         {/* USER POSTS */}
-        {/* ====================================== */}
 
         <div className="mt-8">
 
@@ -1128,6 +1092,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-3">
 
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
+
                       {post.author.profileImage ? (
                         <img
                           src={`http://localhost:3000${post.author.profileImage}`}
@@ -1139,6 +1104,7 @@ export default function ProfilePage() {
                           .charAt(0)
                           .toUpperCase()
                       )}
+
                     </div>
 
                     <div>
@@ -1200,5 +1166,19 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| PROTECTED PROFILE PAGE
+|--------------------------------------------------------------------------
+*/
+
+export default function ProfilePage() {
+  return (
+    <ProtectedRoute>
+      <ProfilePageContent />
+    </ProtectedRoute>
   );
 }
