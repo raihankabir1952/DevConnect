@@ -1,4 +1,9 @@
 import {
+  createHash,
+  randomBytes,
+} from 'crypto';
+
+import {
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -12,34 +17,23 @@ import { PrismaService } from '../prisma/prisma.service';
 
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { EmailService } from './email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
-  // ==========================================
   // REGISTER
-  // POST /auth/register
-  // ==========================================
+  async register(registerDto: RegisterDto) {
+    const { name, email, password } = registerDto;
 
-  async register(
-    registerDto: RegisterDto,
-  ) {
-    const {
-      name,
-      email,
-      password,
-    } = registerDto;
-
-    // Check if email already exists
     const existingUser =
       await this.prisma.user.findUnique({
-        where: {
-          email,
-        },
+        where: { email },
       });
 
     if (existingUser) {
@@ -48,19 +42,34 @@ export class AuthService {
       );
     }
 
-    // Hash password
     const hashedPassword =
       await bcrypt.hash(password, 10);
 
-    // Create user
+    const verificationToken =
+      randomBytes(32).toString('hex');
+
+    const verificationTokenHash =
+      createHash('sha256')
+        .update(verificationToken)
+        .digest('hex');
+
+    const verificationExpiresAt =
+      new Date(
+        Date.now() +
+          24 * 60 * 60 * 1000,
+      );
+
     const user =
       await this.prisma.user.create({
         data: {
           name,
           email,
           password: hashedPassword,
+          emailVerificationTokenHash:
+            verificationTokenHash,
+          emailVerificationExpiresAt:
+            verificationExpiresAt,
         },
-
         select: {
           id: true,
           name: true,
@@ -69,43 +78,192 @@ export class AuthService {
         },
       });
 
+    await this.emailService.sendVerificationEmail(
+      email,
+      name,
+      verificationToken,
+    );
+
     return {
       message:
-        'Registration successful',
-
+        'Registration successful. Please check your email to verify your account.',
       user,
     };
   }
 
-  // ==========================================
-  // LOGIN
-  // POST /auth/login
-  // ==========================================
+  // VERIFY EMAIL
+  async verifyEmail(token: string) {
+    const tokenHash =
+      createHash('sha256')
+        .update(token)
+        .digest('hex');
 
-  async login(
-    loginDto: LoginDto,
-  ) {
-    const {
-      email,
-      password,
-    } = loginDto;
-
-    // Find user
     const user =
-      await this.prisma.user.findUnique({
+      await this.prisma.user.findFirst({
         where: {
-          email,
+          emailVerificationTokenHash:
+            tokenHash,
         },
       });
 
-    // User not found
+    if (!user) {
+      throw new UnauthorizedException(
+        'Invalid verification token',
+      );
+    }
+
+    if (
+      !user.emailVerificationExpiresAt ||
+      user.emailVerificationExpiresAt <
+        new Date()
+    ) {
+      throw new UnauthorizedException(
+        'Verification token has expired',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        emailVerified: true,
+        emailVerificationTokenHash: null,
+        emailVerificationExpiresAt: null,
+      },
+    });
+
+    return {
+      message:
+        'Email verified successfully',
+    };
+  }
+
+  // FORGOT PASSWORD
+  async forgotPassword(email: string) {
+    const user =
+      await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+    if (!user) {
+      return {
+        message:
+          'If the email exists, a password reset link has been sent.',
+      };
+    }
+
+    const resetToken =
+      randomBytes(32).toString('hex');
+
+    const resetTokenHash =
+      createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+
+    const resetExpiresAt =
+      new Date(
+        Date.now() +
+          15 * 60 * 1000,
+      );
+
+    await this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        passwordResetTokenHash:
+          resetTokenHash,
+        passwordResetExpiresAt:
+          resetExpiresAt,
+      },
+    });
+
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      user.name,
+      resetToken,
+    );
+
+    return {
+      message:
+        'If the email exists, a password reset link has been sent.',
+    };
+  }
+
+  // RESET PASSWORD
+  async resetPassword(
+    token: string,
+    password: string,
+  ) {
+    const tokenHash =
+      createHash('sha256')
+        .update(token)
+        .digest('hex');
+
+    const user =
+      await this.prisma.user.findFirst({
+        where: {
+          passwordResetTokenHash:
+            tokenHash,
+        },
+      });
+
+    if (!user) {
+      throw new UnauthorizedException(
+        'Invalid or expired reset token',
+      );
+    }
+
+    if (
+      !user.passwordResetExpiresAt ||
+      user.passwordResetExpiresAt <
+        new Date()
+    ) {
+      throw new UnauthorizedException(
+        'Reset token has expired',
+      );
+    }
+
+    const hashedPassword =
+      await bcrypt.hash(
+        password,
+        10,
+      );
+
+    await this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        password: hashedPassword,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    return {
+      message:
+        'Password reset successfully',
+    };
+  }
+
+  // LOGIN
+  async login(loginDto: LoginDto) {
+    const { email, password } =
+      loginDto;
+
+    const user =
+      await this.prisma.user.findUnique({
+        where: { email },
+      });
+
     if (!user) {
       throw new UnauthorizedException(
         'Invalid email or password',
       );
     }
 
-    // Compare password
     const isPasswordValid =
       await bcrypt.compare(
         password,
@@ -118,24 +276,25 @@ export class AuthService {
       );
     }
 
-    // JWT Payload
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email before logging in',
+      );
+    }
+
     const payload = {
       sub: user.id,
       email: user.email,
     };
 
-    // Generate JWT
     const accessToken =
       await this.jwtService.signAsync(
         payload,
       );
 
     return {
-      message:
-        'Login successful',
-
+      message: 'Login successful',
       accessToken,
-
       user: {
         id: user.id,
         name: user.name,
