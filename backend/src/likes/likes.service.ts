@@ -4,11 +4,13 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class LikesService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ==========================================
@@ -83,6 +85,22 @@ export class LikesService {
         postId,
       },
     });
+
+    // ==========================================
+    // CREATE NOTIFICATION
+    // ==========================================
+
+    // Don't notify the user if they like
+    // their own post
+    if (post.authorId !== userId) {
+      await this.notificationsService.createNotification({
+        userId: post.authorId,
+        actorId: userId,
+        postId,
+        type: 'LIKE',
+        message: 'liked your post',
+      });
+    }
 
     // Get updated like count
     const likeCount =

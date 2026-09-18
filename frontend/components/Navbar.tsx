@@ -16,6 +16,27 @@ interface LoggedInUser {
   profileImage?: string | null;
 }
 
+interface NotificationActor {
+  id: number;
+  name: string;
+  profileImage?: string | null;
+}
+
+interface NotificationPost {
+  id: number;
+  title: string;
+}
+
+interface Notification {
+  id: number;
+  type: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  actor?: NotificationActor | null;
+  post?: NotificationPost | null;
+}
+
 export default function Navbar() {
   // ==========================================
   // SEARCH STATES
@@ -40,11 +61,50 @@ export default function Navbar() {
     useState<LoggedInUser | null>(null);
 
   // ==========================================
-  // SEARCH REF
+  // NOTIFICATION STATES
+  // ==========================================
+
+  const [notifications, setNotifications] =
+    useState<Notification[]>([]);
+
+  const [showNotifications, setShowNotifications] =
+    useState(false);
+
+  const [notificationLoading, setNotificationLoading] =
+    useState(false);
+
+  // ==========================================
+  // REFS
   // ==========================================
 
   const searchRef =
     useRef<HTMLDivElement>(null);
+
+  const notificationRef =
+    useRef<HTMLDivElement>(null);
+
+  // ==========================================
+  // PROFILE IMAGE URL
+  // ==========================================
+
+  function getProfileImageUrl(
+    profileImage?: string | null,
+  ) {
+    if (!profileImage) {
+      return null;
+    }
+
+    // যদি already full URL হয়
+    if (
+      profileImage.startsWith('http://') ||
+      profileImage.startsWith('https://')
+    ) {
+      return profileImage;
+    }
+
+    // Backend থেকে পাওয়া path
+    return `http://localhost:3000${profileImage}`;
+  }
 
   // ==========================================
   // LOAD LOGGED-IN USER
@@ -69,7 +129,6 @@ export default function Navbar() {
 
         // ======================================
         // FETCH LATEST USER PROFILE
-        // This gets latest profileImage
         // ======================================
 
         const response = await fetch(
@@ -111,6 +170,183 @@ export default function Navbar() {
 
     loadCurrentUser();
   }, []);
+
+  // ==========================================
+  // FETCH NOTIFICATIONS
+  // ==========================================
+
+  async function fetchNotifications() {
+  const token = localStorage.getItem('accessToken');
+
+  if (!token) {
+    setNotifications([]);
+    return;
+  }
+
+  try {
+    setNotificationLoading(true);
+
+    const response = await fetch(
+      'http://localhost:3000/notifications',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      console.error(
+        'Failed to fetch notifications:',
+        response.status,
+        errorText,
+      );
+
+      return;
+    }
+
+    const data = await response.json();
+
+    if (Array.isArray(data)) {
+      setNotifications(data);
+    }
+  } catch (error) {
+    console.error('Notification fetch error:', error);
+  } finally {
+    setNotificationLoading(false);
+  }
+}
+
+  // ==========================================
+  // LOAD NOTIFICATIONS
+  // ==========================================
+
+  useEffect(() => {
+    if (!currentUser) {
+      setNotifications([]);
+      return;
+    }
+
+    // Initial fetch
+    fetchNotifications();
+
+    // Refresh every 10 seconds
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [currentUser]);
+
+  // ==========================================
+  // UNREAD COUNT
+  // ==========================================
+
+  const unreadCount =
+    notifications.filter(
+      (notification) =>
+        !notification.isRead,
+    ).length;
+
+  // ==========================================
+  // MARK SINGLE NOTIFICATION AS READ
+  // ==========================================
+
+  async function markNotificationAsRead(
+    notificationId: number,
+  ) {
+    const token =
+      localStorage.getItem('accessToken');
+
+    if (!token) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/notifications/${notificationId}/read`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        console.error(
+          'Failed to mark notification as read',
+        );
+
+        return;
+      }
+
+      setNotifications((previous) =>
+        previous.map((notification) =>
+          notification.id === notificationId
+            ? {
+                ...notification,
+                isRead: true,
+              }
+            : notification,
+        ),
+      );
+    } catch (error) {
+      console.error(
+        'Mark notification read error:',
+        error,
+      );
+    }
+  }
+
+  // ==========================================
+  // MARK ALL NOTIFICATIONS AS READ
+  // ==========================================
+
+  async function markAllNotificationsAsRead() {
+    const token =
+      localStorage.getItem('accessToken');
+
+    if (!token || unreadCount === 0) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        'http://localhost:3000/notifications/read-all',
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        console.error(
+          'Failed to mark all notifications as read',
+        );
+
+        return;
+      }
+
+      setNotifications((previous) =>
+        previous.map((notification) => ({
+          ...notification,
+          isRead: true,
+        })),
+      );
+    } catch (error) {
+      console.error(
+        'Mark all notifications read error:',
+        error,
+      );
+    }
+  }
 
   // ==========================================
   // SEARCH USERS
@@ -191,7 +427,7 @@ export default function Navbar() {
   }, [search]);
 
   // ==========================================
-  // CLOSE SEARCH RESULT
+  // CLOSE SEARCH + NOTIFICATION
   // CLICK OUTSIDE
   // ==========================================
 
@@ -199,13 +435,23 @@ export default function Navbar() {
     function handleClickOutside(
       event: MouseEvent,
     ) {
+      const target =
+        event.target as Node;
+
       if (
         searchRef.current &&
-        !searchRef.current.contains(
-          event.target as Node,
-        )
+        !searchRef.current.contains(target)
       ) {
         setShowResults(false);
+      }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(
+          target,
+        )
+      ) {
+        setShowNotifications(false);
       }
     }
 
@@ -233,6 +479,27 @@ export default function Navbar() {
   }
 
   // ==========================================
+  // HANDLE NOTIFICATION CLICK
+  // ==========================================
+
+  async function handleNotificationClick(
+    notification: Notification,
+  ) {
+    if (!notification.isRead) {
+      await markNotificationAsRead(
+        notification.id,
+      );
+    }
+
+    setShowNotifications(false);
+
+    // Related post থাকলে home page-এ যাবে
+    if (notification.post) {
+      window.location.href = `/?post=${notification.post.id}`;
+    }
+  }
+
+  // ==========================================
   // LOGOUT
   // ==========================================
 
@@ -245,30 +512,59 @@ export default function Navbar() {
 
     setCurrentUser(null);
 
+    setNotifications([]);
+
     window.location.href = '/login';
   }
 
   // ==========================================
-  // PROFILE IMAGE URL
+  // FORMAT NOTIFICATION TIME
   // ==========================================
 
-  function getProfileImageUrl(
-    profileImage?: string | null,
+  function formatNotificationTime(
+    dateString: string,
   ) {
-    if (!profileImage) {
-      return null;
+    const date =
+      new Date(dateString);
+
+    const now = new Date();
+
+    const difference =
+      now.getTime() - date.getTime();
+
+    const seconds = Math.floor(
+      difference / 1000,
+    );
+
+    if (seconds < 60) {
+      return 'Just now';
     }
 
-    // যদি already full URL হয়
-    if (
-      profileImage.startsWith('http://') ||
-      profileImage.startsWith('https://')
-    ) {
-      return profileImage;
+    const minutes = Math.floor(
+      seconds / 60,
+    );
+
+    if (minutes < 60) {
+      return `${minutes}m ago`;
     }
 
-    // Backend থেকে পাওয়া path
-    return `http://localhost:3000${profileImage}`;
+    const hours = Math.floor(
+      minutes / 60,
+    );
+
+    if (hours < 24) {
+      return `${hours}h ago`;
+    }
+
+    const days = Math.floor(
+      hours / 24,
+    );
+
+    if (days < 7) {
+      return `${days}d ago`;
+    }
+
+    return date.toLocaleDateString();
   }
 
   return (
@@ -405,7 +701,7 @@ export default function Navbar() {
         {/* RIGHT SIDE */}
         {/* ========================================== */}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
 
           {/* Home */}
 
@@ -415,6 +711,208 @@ export default function Navbar() {
           >
             Home
           </Link>
+
+          {/* ========================================== */}
+          {/* NOTIFICATION */}
+          {/* ========================================== */}
+
+          {currentUser && (
+            <div
+              ref={notificationRef}
+              className="relative"
+            >
+              {/* Bell Button */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowNotifications(
+                    (previous) =>
+                      !previous,
+                  )
+                }
+                className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-lg transition hover:border-blue-200 hover:bg-blue-50"
+                aria-label="Notifications"
+              >
+                🔔
+
+                {/* Unread Badge */}
+
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
+                    {unreadCount > 99
+                      ? '99+'
+                      : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* ====================================== */}
+              {/* NOTIFICATION DROPDOWN */}
+              {/* ====================================== */}
+
+              {showNotifications && (
+                <div className="absolute right-0 top-12 z-50 w-[350px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+
+                  {/* Header */}
+
+                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        Notifications
+                      </h3>
+
+                      {unreadCount > 0 && (
+                        <p className="text-xs text-gray-500">
+                          {unreadCount} unread
+                        </p>
+                      )}
+                    </div>
+
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={
+                          markAllNotificationsAsRead
+                        }
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification List */}
+
+                  <div className="max-h-[420px] overflow-y-auto">
+
+                    {notificationLoading &&
+                    notifications.length === 0 ? (
+                      <div className="px-4 py-10 text-center">
+                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
+
+                        <p className="mt-3 text-sm text-gray-500">
+                          Loading notifications...
+                        </p>
+                      </div>
+                    ) : notifications.length ===
+                      0 ? (
+                      <div className="px-4 py-10 text-center">
+                        <div className="text-3xl">
+                          🔔
+                        </div>
+
+                        <p className="mt-3 text-sm font-medium text-gray-700">
+                          No notifications yet
+                        </p>
+
+                        <p className="mt-1 text-xs text-gray-400">
+                          When someone interacts
+                          with you, it will appear
+                          here.
+                        </p>
+                      </div>
+                    ) : (
+                      notifications.map(
+                        (notification) => {
+                          const actorImage =
+                            getProfileImageUrl(
+                              notification
+                                .actor
+                                ?.profileImage,
+                            );
+
+                          return (
+                            <button
+                              key={
+                                notification.id
+                              }
+                              type="button"
+                              onClick={() =>
+                                handleNotificationClick(
+                                  notification,
+                                )
+                              }
+                              className={`flex w-full gap-3 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 ${
+                                !notification.isRead
+                                  ? 'bg-blue-50/60'
+                                  : 'bg-white'
+                              }`}
+                            >
+                              {/* Actor Avatar */}
+
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
+                                {actorImage ? (
+                                  <img
+                                    src={
+                                      actorImage
+                                    }
+                                    alt={
+                                      notification
+                                        .actor
+                                        ?.name ||
+                                      'User'
+                                    }
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  notification.actor?.name
+                                    ?.charAt(
+                                      0,
+                                    )
+                                    .toUpperCase() ||
+                                  'U'
+                                )}
+                              </div>
+
+                              {/* Notification Content */}
+
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm leading-5 text-gray-700">
+                                  <span className="font-semibold text-gray-900">
+                                    {
+                                      notification
+                                        .actor
+                                        ?.name
+                                    }
+                                  </span>{' '}
+                                  {
+                                    notification.message
+                                  }
+                                </p>
+
+                                {notification.post && (
+                                  <p className="mt-1 truncate text-xs font-medium text-blue-600">
+                                    {
+                                      notification
+                                        .post
+                                        .title
+                                    }
+                                  </p>
+                                )}
+
+                                <p className="mt-1 text-[11px] text-gray-400">
+                                  {formatNotificationTime(
+                                    notification.createdAt,
+                                  )}
+                                </p>
+                              </div>
+
+                              {/* Unread Dot */}
+
+                              {!notification.isRead && (
+                                <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                              )}
+                            </button>
+                          );
+                        },
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ========================================== */}
           {/* LOGGED IN USER */}

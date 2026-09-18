@@ -21,6 +21,7 @@ model User {
   passwordResetTokenHash     String?
   passwordResetExpiresAt     DateTime?
 
+  // Profile
   profileImage String?
   coverImage   String?
   bio          String?
@@ -40,6 +41,10 @@ model User {
   // Following System
   following Follow[] @relation("Following")
   followers Follow[] @relation("Followers")
+
+  // Notifications
+  notificationsReceived Notification[] @relation("UserNotifications")
+  notificationsSent     Notification[] @relation("NotificationActors")
 }
 
 model Post {
@@ -60,6 +65,9 @@ model Post {
 
   // Post Likes
   likes Like[]
+
+  // Post Notifications
+  notifications Notification[]
 }
 
 model Comment {
@@ -106,4 +114,35 @@ model Follow {
 
   // Prevent duplicate follow
   @@unique([followerId, followingId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+
+  // Notification Type
+  // Example: LIKE, COMMENT, FOLLOW
+  type      String
+
+  // Notification Message
+  message   String
+
+  // Read / Unread
+  isRead    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  // User who receives notification
+  userId    Int
+  user      User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  // User who triggered notification
+  actorId   Int?
+  actor     User? @relation("NotificationActors", fields: [actorId], references: [id], onDelete: Cascade)
+
+  // Related post (optional)
+  postId    Int?
+  post      Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // Faster notification queries
+  @@index([userId, createdAt])
 }

@@ -52,6 +52,12 @@ export default function PostCard({
   const [loading, setLoading] =
     useState(false);
 
+  const [likeLoading, setLikeLoading] =
+    useState(false);
+
+  const [likeStatusLoading, setLikeStatusLoading] =
+    useState(false);
+
   const [showMenu, setShowMenu] =
     useState(false);
 
@@ -71,7 +77,10 @@ export default function PostCard({
 
   const [error, setError] = useState('');
 
-  // Like states
+  // ==========================================
+  // LIKE STATES
+  // ==========================================
+
   const [liked, setLiked] =
     useState(false);
 
@@ -110,12 +119,66 @@ export default function PostCard({
   }, []);
 
   // ==========================================
-  // UPDATE LIKE COUNT
+  // UPDATE LIKE COUNT WHEN POST CHANGES
   // ==========================================
 
   useEffect(() => {
     setLikeCount(post._count.likes);
   }, [post._count.likes]);
+
+  // ==========================================
+  // CHECK CURRENT USER LIKE STATUS
+  // ==========================================
+
+  useEffect(() => {
+    async function checkLikeStatus() {
+      const token =
+        localStorage.getItem(
+          'accessToken',
+        );
+
+      if (!token) {
+        setLiked(false);
+        return;
+      }
+
+      setLikeStatusLoading(true);
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/posts/${post.id}/like-status`,
+          {
+            method: 'GET',
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              'Failed to check like status',
+          );
+        }
+
+        setLiked(data.liked);
+      } catch (error) {
+        console.error(
+          'Failed to check like status:',
+          error,
+        );
+      } finally {
+        setLikeStatusLoading(false);
+      }
+    }
+
+    checkLikeStatus();
+  }, [post.id]);
 
   // ==========================================
   // CHECK POST OWNER
@@ -130,7 +193,9 @@ export default function PostCard({
 
   async function handleLike() {
     const token =
-      localStorage.getItem('accessToken');
+      localStorage.getItem(
+        'accessToken',
+      );
 
     if (!token) {
       setError(
@@ -140,7 +205,11 @@ export default function PostCard({
       return;
     }
 
-    setLoading(true);
+    if (likeLoading) {
+      return;
+    }
+
+    setLikeLoading(true);
     setError('');
 
     try {
@@ -165,33 +234,10 @@ export default function PostCard({
         );
       }
 
-      // ======================================
-      // UPDATE LIKE UI
-      // ======================================
-
-      if (data.liked) {
-        setLiked(true);
-
-        setLikeCount(
-          (previous) =>
-            previous + 1,
-        );
-      } else {
-        setLiked(false);
-
-        setLikeCount(
-          (previous) =>
-            Math.max(
-              0,
-              previous - 1,
-            ),
-        );
-      }
-
-      // Optional refresh
-      if (onPostUpdated) {
-        onPostUpdated();
-      }
+      // Backend already returns
+      // the exact latest state.
+      setLiked(data.liked);
+      setLikeCount(data.likeCount);
     } catch (error) {
       console.error(error);
 
@@ -201,7 +247,7 @@ export default function PostCard({
           : 'Failed to like post',
       );
     } finally {
-      setLoading(false);
+      setLikeLoading(false);
     }
   }
 
@@ -226,7 +272,9 @@ export default function PostCard({
     }
 
     const token =
-      localStorage.getItem('accessToken');
+      localStorage.getItem(
+        'accessToken',
+      );
 
     if (!token) {
       setError(
@@ -269,13 +317,9 @@ export default function PostCard({
         );
       }
 
-      // Close edit modal
       setShowEditModal(false);
-
-      // Close menu
       setShowMenu(false);
 
-      // Refresh posts
       if (onPostUpdated) {
         onPostUpdated();
       }
@@ -298,7 +342,9 @@ export default function PostCard({
 
   async function handleDelete() {
     const token =
-      localStorage.getItem('accessToken');
+      localStorage.getItem(
+        'accessToken',
+      );
 
     if (!token) {
       setError(
@@ -333,15 +379,11 @@ export default function PostCard({
         );
       }
 
-      // Remove post
       if (onPostDeleted) {
         onPostDeleted(post.id);
       }
 
-      // Close modal
       setShowDeleteModal(false);
-
-      // Close menu
       setShowMenu(false);
     } catch (error) {
       console.error(error);
@@ -432,7 +474,6 @@ export default function PostCard({
                       );
 
                       setShowMenu(false);
-
                       setError('');
 
                       setTitle(
@@ -456,7 +497,6 @@ export default function PostCard({
                       );
 
                       setShowMenu(false);
-
                       setError('');
                     }}
                     className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50"
@@ -523,25 +563,40 @@ export default function PostCard({
 
           <button
             onClick={handleLike}
-            disabled={loading}
-            className={`flex items-center gap-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            disabled={
+              likeLoading ||
+              likeStatusLoading
+            }
+            aria-label={
               liked
-                ? 'text-red-500'
-                : 'text-gray-600 hover:text-red-500'
-            }`}
+                ? 'Unlike post'
+                : 'Like post'
+            }
+            className={`group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+              liked
+                ? 'bg-red-50 text-red-500'
+                : 'text-gray-600 hover:bg-red-50 hover:text-red-500'
+            } disabled:cursor-not-allowed disabled:opacity-60`}
           >
+            {/* Heart */}
             <span
-              className={
+              className={`text-lg transition-transform duration-200 ${
                 liked
                   ? 'scale-110'
-                  : ''
-              }
+                  : 'group-hover:scale-110'
+              }`}
             >
-              ❤️
+              {liked ? '❤️' : '🤍'}
             </span>
 
+            {/* Count */}
             <span>
-              {likeCount}{' '}
+              {likeStatusLoading
+                ? '...'
+                : likeCount}
+            </span>
+
+            <span className="hidden sm:inline">
               {likeCount === 1
                 ? 'Like'
                 : 'Likes'}
@@ -566,7 +621,6 @@ export default function PostCard({
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-            {/* Header */}
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">
                 Edit Post
@@ -586,12 +640,10 @@ export default function PostCard({
               </button>
             </div>
 
-            {/* Form */}
             <form
               onSubmit={handleUpdate}
               className="mt-6 space-y-5"
             >
-              {/* Title */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Title
@@ -610,7 +662,6 @@ export default function PostCard({
                 />
               </div>
 
-              {/* Content */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Content
@@ -629,14 +680,12 @@ export default function PostCard({
                 />
               </div>
 
-              {/* Error */}
               {error && (
                 <p className="text-sm text-red-600">
                   {error}
                 </p>
               )}
 
-              {/* Buttons */}
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
@@ -674,26 +723,22 @@ export default function PostCard({
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            {/* Title */}
             <h2 className="text-xl font-bold text-gray-900">
               Delete Post?
             </h2>
 
-            {/* Description */}
             <p className="mt-2 text-sm leading-6 text-gray-500">
               Are you sure you want to
               delete this post? This action
               cannot be undone.
             </p>
 
-            {/* Error */}
             {error && (
               <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
                 {error}
               </div>
             )}
 
-            {/* Buttons */}
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => {
