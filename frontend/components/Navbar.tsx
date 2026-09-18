@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 interface User {
   id: number;
@@ -74,6 +78,13 @@ export default function Navbar() {
     useState(false);
 
   // ==========================================
+  // MOBILE MENU
+  // ==========================================
+
+  const [showMobileMenu, setShowMobileMenu] =
+    useState(false);
+
+  // ==========================================
   // REFS
   // ==========================================
 
@@ -81,6 +92,9 @@ export default function Navbar() {
     useRef<HTMLDivElement>(null);
 
   const notificationRef =
+    useRef<HTMLDivElement>(null);
+
+  const mobileMenuRef =
     useRef<HTMLDivElement>(null);
 
   // ==========================================
@@ -94,7 +108,6 @@ export default function Navbar() {
       return null;
     }
 
-    // যদি already full URL হয়
     if (
       profileImage.startsWith('http://') ||
       profileImage.startsWith('https://')
@@ -102,7 +115,6 @@ export default function Navbar() {
       return profileImage;
     }
 
-    // Backend থেকে পাওয়া path
     return `http://localhost:3000${profileImage}`;
   }
 
@@ -124,12 +136,7 @@ export default function Navbar() {
         const parsedUser: LoggedInUser =
           JSON.parse(storedUser);
 
-        // প্রথমে localStorage-এর user দেখাবে
         setCurrentUser(parsedUser);
-
-        // ======================================
-        // FETCH LATEST USER PROFILE
-        // ======================================
 
         const response = await fetch(
           `http://localhost:3000/users/${parsedUser.id}`,
@@ -150,10 +157,8 @@ export default function Navbar() {
             latestUser.profileImage || null,
         };
 
-        // Update state
         setCurrentUser(updatedUser);
 
-        // Update localStorage
         localStorage.setItem(
           'user',
           JSON.stringify(updatedUser),
@@ -176,48 +181,57 @@ export default function Navbar() {
   // ==========================================
 
   async function fetchNotifications() {
-  const token = localStorage.getItem('accessToken');
-
-  if (!token) {
-    setNotifications([]);
-    return;
-  }
-
-  try {
-    setNotificationLoading(true);
-
-    const response = await fetch(
-      'http://localhost:3000/notifications',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      console.error(
-        'Failed to fetch notifications:',
-        response.status,
-        errorText,
+    const token =
+      localStorage.getItem(
+        'accessToken',
       );
 
+    if (!token) {
+      setNotifications([]);
       return;
     }
 
-    const data = await response.json();
+    try {
+      setNotificationLoading(true);
 
-    if (Array.isArray(data)) {
-      setNotifications(data);
+      const response = await fetch(
+        'http://localhost:3000/notifications',
+        {
+          headers: {
+            Authorization:
+              `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorText =
+          await response.text();
+
+        console.error(
+          'Failed to fetch notifications:',
+          response.status,
+          errorText,
+        );
+
+        return;
+      }
+
+      const data =
+        await response.json();
+
+      if (Array.isArray(data)) {
+        setNotifications(data);
+      }
+    } catch (error) {
+      console.error(
+        'Notification fetch error:',
+        error,
+      );
+    } finally {
+      setNotificationLoading(false);
     }
-  } catch (error) {
-    console.error('Notification fetch error:', error);
-  } finally {
-    setNotificationLoading(false);
   }
-}
 
   // ==========================================
   // LOAD NOTIFICATIONS
@@ -229,13 +243,12 @@ export default function Navbar() {
       return;
     }
 
-    // Initial fetch
     fetchNotifications();
 
-    // Refresh every 10 seconds
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 10000);
+    const interval =
+      setInterval(() => {
+        fetchNotifications();
+      }, 10000);
 
     return () => {
       clearInterval(interval);
@@ -260,7 +273,9 @@ export default function Navbar() {
     notificationId: number,
   ) {
     const token =
-      localStorage.getItem('accessToken');
+      localStorage.getItem(
+        'accessToken',
+      );
 
     if (!token) {
       return;
@@ -272,7 +287,8 @@ export default function Navbar() {
         {
           method: 'PATCH',
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization:
+              `Bearer ${token}`,
           },
         },
       );
@@ -286,13 +302,15 @@ export default function Navbar() {
       }
 
       setNotifications((previous) =>
-        previous.map((notification) =>
-          notification.id === notificationId
-            ? {
-                ...notification,
-                isRead: true,
-              }
-            : notification,
+        previous.map(
+          (notification) =>
+            notification.id ===
+            notificationId
+              ? {
+                  ...notification,
+                  isRead: true,
+                }
+              : notification,
         ),
       );
     } catch (error) {
@@ -309,7 +327,9 @@ export default function Navbar() {
 
   async function markAllNotificationsAsRead() {
     const token =
-      localStorage.getItem('accessToken');
+      localStorage.getItem(
+        'accessToken',
+      );
 
     if (!token || unreadCount === 0) {
       return;
@@ -321,7 +341,8 @@ export default function Navbar() {
         {
           method: 'PATCH',
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization:
+              `Bearer ${token}`,
           },
         },
       );
@@ -335,10 +356,12 @@ export default function Navbar() {
       }
 
       setNotifications((previous) =>
-        previous.map((notification) => ({
-          ...notification,
-          isRead: true,
-        })),
+        previous.map(
+          (notification) => ({
+            ...notification,
+            isRead: true,
+          }),
+        ),
       );
     } catch (error) {
       console.error(
@@ -357,7 +380,6 @@ export default function Navbar() {
       const trimmedSearch =
         search.trim();
 
-      // Empty search
       if (!trimmedSearch) {
         setUsers([]);
         setShowResults(false);
@@ -377,11 +399,6 @@ export default function Navbar() {
           await response.json();
 
         if (!response.ok) {
-          console.error(
-            'Backend search error:',
-            data,
-          );
-
           throw new Error(
             data?.message ||
               'Failed to search users',
@@ -389,11 +406,6 @@ export default function Navbar() {
         }
 
         if (!Array.isArray(data)) {
-          console.error(
-            'Unexpected search response:',
-            data,
-          );
-
           throw new Error(
             'Invalid response from server',
           );
@@ -427,8 +439,7 @@ export default function Navbar() {
   }, [search]);
 
   // ==========================================
-  // CLOSE SEARCH + NOTIFICATION
-  // CLICK OUTSIDE
+  // CLOSE DROPDOWNS
   // ==========================================
 
   useEffect(() => {
@@ -453,6 +464,15 @@ export default function Navbar() {
       ) {
         setShowNotifications(false);
       }
+
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(
+          target,
+        )
+      ) {
+        setShowMobileMenu(false);
+      }
     }
 
     document.addEventListener(
@@ -476,6 +496,8 @@ export default function Navbar() {
     setSearch('');
 
     setShowResults(false);
+
+    setShowMobileMenu(false);
   }
 
   // ==========================================
@@ -493,9 +515,9 @@ export default function Navbar() {
 
     setShowNotifications(false);
 
-    // Related post থাকলে home page-এ যাবে
     if (notification.post) {
-      window.location.href = `/?post=${notification.post.id}`;
+      window.location.href =
+        `/?post=${notification.post.id}`;
     }
   }
 
@@ -514,6 +536,8 @@ export default function Navbar() {
 
     setNotifications([]);
 
+    setShowMobileMenu(false);
+
     window.location.href = '/login';
   }
 
@@ -530,7 +554,8 @@ export default function Navbar() {
     const now = new Date();
 
     const difference =
-      now.getTime() - date.getTime();
+      now.getTime() -
+      date.getTime();
 
     const seconds = Math.floor(
       difference / 1000,
@@ -567,35 +592,50 @@ export default function Navbar() {
     return date.toLocaleDateString();
   }
 
+  // ==========================================
+  // CLOSE MOBILE MENU
+  // ==========================================
+
+  function closeMobileMenu() {
+    setShowMobileMenu(false);
+  }
+
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
+    <nav className="sticky top-0 z-50 border-b border-gray-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
+
       {/* ========================================== */}
       {/* MAIN NAVBAR */}
       {/* ========================================== */}
 
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
 
-        {/* ========================================== */}
+        {/* ======================================== */}
         {/* LOGO */}
-        {/* ========================================== */}
+        {/* ======================================== */}
 
         <Link
           href="/"
-          className="shrink-0 text-xl font-bold text-blue-600"
+          className="group flex shrink-0 items-center gap-2"
         >
-          DevConnect
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white shadow-sm transition group-hover:scale-105 group-hover:bg-blue-700">
+            D
+          </div>
+
+          <span className="text-lg font-bold tracking-tight text-gray-900 sm:text-xl">
+            Dev<span className="text-blue-600">
+              Connect
+            </span>
+          </span>
         </Link>
 
-        {/* ========================================== */}
+        {/* ======================================== */}
         {/* DESKTOP SEARCH */}
-        {/* ========================================== */}
+        {/* ======================================== */}
 
         <div
           ref={searchRef}
-          className="relative hidden w-full max-w-md md:block"
+          className="relative ml-2 hidden w-full max-w-md md:block"
         >
-          {/* Search Input */}
-
           <div className="relative">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
               🔍
@@ -613,24 +653,20 @@ export default function Navbar() {
                 }
               }}
               placeholder="Search developers..."
-              className="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-24 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/80 py-2.5 pl-11 pr-24 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
             />
 
-            {/* Loading */}
-
             {searching && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-500">
                 Searching...
               </span>
             )}
           </div>
 
-          {/* ========================================== */}
-          {/* DESKTOP SEARCH RESULTS */}
-          {/* ========================================== */}
+          {/* Search Results */}
 
           {showResults && (
-            <div className="absolute left-0 right-0 top-14 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+            <div className="absolute left-0 right-0 top-14 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
               {users.length > 0 ? (
                 <div className="py-2">
                   {users.map((user) => {
@@ -646,10 +682,8 @@ export default function Navbar() {
                         onClick={
                           handleUserClick
                         }
-                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-gray-50"
+                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-blue-50/60"
                       >
-                        {/* Avatar */}
-
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
                           {imageUrl ? (
                             <img
@@ -664,10 +698,8 @@ export default function Navbar() {
                           )}
                         </div>
 
-                        {/* User Info */}
-
-                        <div>
-                          <p className="font-medium text-gray-900">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-gray-900">
                             {user.name}
                           </p>
 
@@ -681,14 +713,17 @@ export default function Navbar() {
                 </div>
               ) : (
                 !searching && (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-sm font-medium text-gray-700">
+                  <div className="px-4 py-7 text-center">
+                    <div className="text-2xl">
+                      🔍
+                    </div>
+
+                    <p className="mt-2 text-sm font-semibold text-gray-700">
                       No users found
                     </p>
 
                     <p className="mt-1 text-xs text-gray-400">
-                      Try searching with another
-                      name.
+                      Try another name.
                     </p>
                   </div>
                 )
@@ -697,32 +732,30 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* ========================================== */}
+        {/* ======================================== */}
         {/* RIGHT SIDE */}
-        {/* ========================================== */}
+        {/* ======================================== */}
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
 
-          {/* Home */}
+          {/* Desktop Home */}
 
           <Link
             href="/"
-            className="hidden rounded-full px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 sm:block"
+            className="hidden rounded-xl px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 lg:block"
           >
             Home
           </Link>
 
-          {/* ========================================== */}
+          {/* ====================================== */}
           {/* NOTIFICATION */}
-          {/* ========================================== */}
+          {/* ====================================== */}
 
           {currentUser && (
             <div
               ref={notificationRef}
               className="relative"
             >
-              {/* Bell Button */}
-
               <button
                 type="button"
                 onClick={() =>
@@ -731,15 +764,19 @@ export default function Navbar() {
                       !previous,
                   )
                 }
-                className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-lg transition hover:border-blue-200 hover:bg-blue-50"
+                className={`relative flex h-10 w-10 items-center justify-center rounded-xl border transition ${
+                  showNotifications
+                    ? 'border-blue-200 bg-blue-50 text-blue-600'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
+                }`}
                 aria-label="Notifications"
               >
-                🔔
-
-                {/* Unread Badge */}
+                <span className="text-lg">
+                  🔔
+                </span>
 
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
+                  <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[9px] font-bold text-white">
                     {unreadCount > 99
                       ? '99+'
                       : unreadCount}
@@ -747,23 +784,21 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* ====================================== */}
-              {/* NOTIFICATION DROPDOWN */}
-              {/* ====================================== */}
+              {/* Notification Dropdown */}
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-[350px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
 
                   {/* Header */}
 
                   <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                     <div>
-                      <h3 className="font-semibold text-gray-900">
+                      <h3 className="font-bold text-gray-900">
                         Notifications
                       </h3>
 
                       {unreadCount > 0 && (
-                        <p className="text-xs text-gray-500">
+                        <p className="mt-0.5 text-xs text-gray-500">
                           {unreadCount} unread
                         </p>
                       )}
@@ -775,9 +810,9 @@ export default function Navbar() {
                         onClick={
                           markAllNotificationsAsRead
                         }
-                        className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                        className="rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
                       >
-                        Mark all as read
+                        Mark all read
                       </button>
                     )}
                   </div>
@@ -785,11 +820,10 @@ export default function Navbar() {
                   {/* Notification List */}
 
                   <div className="max-h-[420px] overflow-y-auto">
-
                     {notificationLoading &&
                     notifications.length === 0 ? (
                       <div className="px-4 py-10 text-center">
-                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
+                        <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
 
                         <p className="mt-3 text-sm text-gray-500">
                           Loading notifications...
@@ -798,18 +832,17 @@ export default function Navbar() {
                     ) : notifications.length ===
                       0 ? (
                       <div className="px-4 py-10 text-center">
-                        <div className="text-3xl">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-xl">
                           🔔
                         </div>
 
-                        <p className="mt-3 text-sm font-medium text-gray-700">
+                        <p className="mt-3 text-sm font-semibold text-gray-700">
                           No notifications yet
                         </p>
 
                         <p className="mt-1 text-xs text-gray-400">
-                          When someone interacts
-                          with you, it will appear
-                          here.
+                          Your notifications will
+                          appear here.
                         </p>
                       </div>
                     ) : (
@@ -833,14 +866,12 @@ export default function Navbar() {
                                   notification,
                                 )
                               }
-                              className={`flex w-full gap-3 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 ${
+                              className={`flex w-full gap-3 border-b border-gray-100 px-4 py-3.5 text-left transition last:border-b-0 hover:bg-gray-50 ${
                                 !notification.isRead
                                   ? 'bg-blue-50/60'
                                   : 'bg-white'
                               }`}
                             >
-                              {/* Actor Avatar */}
-
                               <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
                                 {actorImage ? (
                                   <img
@@ -865,11 +896,9 @@ export default function Navbar() {
                                 )}
                               </div>
 
-                              {/* Notification Content */}
-
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm leading-5 text-gray-700">
-                                  <span className="font-semibold text-gray-900">
+                                  <span className="font-bold text-gray-900">
                                     {
                                       notification
                                         .actor
@@ -882,7 +911,7 @@ export default function Navbar() {
                                 </p>
 
                                 {notification.post && (
-                                  <p className="mt-1 truncate text-xs font-medium text-blue-600">
+                                  <p className="mt-1 truncate rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600">
                                     {
                                       notification
                                         .post
@@ -898,8 +927,6 @@ export default function Navbar() {
                                 </p>
                               </div>
 
-                              {/* Unread Dot */}
-
                               {!notification.isRead && (
                                 <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
                               )}
@@ -914,20 +941,16 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* ========================================== */}
-          {/* LOGGED IN USER */}
-          {/* ========================================== */}
+          {/* ====================================== */}
+          {/* DESKTOP USER */}
+          {/* ====================================== */}
 
           {currentUser ? (
             <>
-              {/* Profile */}
-
               <Link
                 href={`/profile/${currentUser.id}`}
-                className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                className="hidden items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:flex"
               >
-                {/* Profile Avatar */}
-
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold text-blue-600">
                   {getProfileImageUrl(
                     currentUser.profileImage,
@@ -946,55 +969,153 @@ export default function Navbar() {
                   )}
                 </div>
 
-                {/* User Name */}
-
-                <span className="hidden sm:inline">
+                <span className="max-w-[100px] truncate">
                   {currentUser.name}
                 </span>
               </Link>
 
-              {/* Logout */}
-
               <button
                 onClick={handleLogout}
-                className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                className="hidden rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:block"
               >
                 Logout
               </button>
             </>
           ) : (
             <>
-              {/* Login */}
-
               <Link
                 href="/login"
-                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                className="hidden rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:block"
               >
                 Login
               </Link>
 
-              {/* Register */}
-
               <Link
                 href="/register"
-                className="hidden rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 sm:block"
+                className="hidden rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 sm:block"
               >
                 Register
               </Link>
             </>
           )}
+
+          {/* ====================================== */}
+          {/* MOBILE MENU BUTTON */}
+          {/* ====================================== */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowMobileMenu(
+                (previous) =>
+                  !previous,
+              )
+            }
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-lg text-gray-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 sm:hidden"
+            aria-label="Open menu"
+          >
+            {showMobileMenu
+              ? '✕'
+              : '☰'}
+          </button>
         </div>
       </div>
+
+      {/* ========================================== */}
+      {/* MOBILE MENU */}
+      {/* ========================================== */}
+
+      {showMobileMenu && (
+        <div
+          ref={mobileMenuRef}
+          className="border-t border-gray-100 bg-white px-4 pb-4 pt-3 shadow-sm sm:hidden"
+        >
+          {/* Mobile Navigation */}
+
+          <div className="space-y-1">
+
+            <Link
+              href="/"
+              onClick={closeMobileMenu}
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+            >
+              <span>🏠</span>
+              Home
+            </Link>
+
+            {currentUser ? (
+              <>
+                <Link
+                  href={`/profile/${currentUser.id}`}
+                  onClick={closeMobileMenu}
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                    {getProfileImageUrl(
+                      currentUser.profileImage,
+                    ) ? (
+                      <img
+                        src={getProfileImageUrl(
+                          currentUser.profileImage,
+                        )!}
+                        alt={currentUser.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      currentUser.name
+                        .charAt(0)
+                        .toUpperCase()
+                    )}
+                  </div>
+
+                  <span className="truncate">
+                    {currentUser.name}
+                  </span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                >
+                  <span>↪</span>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={closeMobileMenu}
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <span>→</span>
+                  Login
+                </Link>
+
+                <Link
+                  href="/register"
+                  onClick={closeMobileMenu}
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <span>＋</span>
+                  Register
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ========================================== */}
       {/* MOBILE SEARCH */}
       {/* ========================================== */}
 
-      <div className="border-t border-gray-100 px-4 py-3 md:hidden">
-        <div className="relative">
-
-          {/* Input */}
-
+      <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-3 md:hidden">
+        <div
+          ref={searchRef}
+          className="relative"
+        >
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
             🔍
           </span>
@@ -1011,13 +1132,19 @@ export default function Navbar() {
               }
             }}
             placeholder="Search developers..."
-            className="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-11 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
           />
 
-          {/* Mobile Results */}
+          {searching && (
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-500">
+              Searching...
+            </span>
+          )}
+
+          {/* Mobile Search Results */}
 
           {showResults && (
-            <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+            <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
               {users.length > 0 ? (
                 <div className="py-2">
                   {users.map((user) => {
@@ -1033,10 +1160,8 @@ export default function Navbar() {
                         onClick={
                           handleUserClick
                         }
-                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-gray-50"
+                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-blue-50"
                       >
-                        {/* Avatar */}
-
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
                           {imageUrl ? (
                             <img
@@ -1051,10 +1176,8 @@ export default function Navbar() {
                           )}
                         </div>
 
-                        {/* User Info */}
-
-                        <div>
-                          <p className="font-medium text-gray-900">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-gray-900">
                             {user.name}
                           </p>
 
@@ -1068,9 +1191,19 @@ export default function Navbar() {
                 </div>
               ) : (
                 !searching && (
-                  <p className="p-5 text-center text-sm text-gray-500">
-                    No users found
-                  </p>
+                  <div className="p-6 text-center">
+                    <div className="text-2xl">
+                      🔍
+                    </div>
+
+                    <p className="mt-2 text-sm font-semibold text-gray-700">
+                      No users found
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-400">
+                      Try another name.
+                    </p>
+                  </div>
                 )
               )}
             </div>

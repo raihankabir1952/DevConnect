@@ -32,12 +32,8 @@ interface Post {
 
 interface PostCardProps {
   post: Post;
-
   onPostUpdated?: () => void;
-
-  onPostDeleted?: (
-    postId: number,
-  ) => void;
+  onPostDeleted?: (postId: number) => void;
 }
 
 export default function PostCard({
@@ -49,8 +45,7 @@ export default function PostCard({
   // STATES
   // ==========================================
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [likeLoading, setLikeLoading] =
     useState(false);
@@ -81,11 +76,11 @@ export default function PostCard({
   // LIKE STATES
   // ==========================================
 
-  const [liked, setLiked] =
-    useState(false);
+  const [liked, setLiked] = useState(false);
 
-  const [likeCount, setLikeCount] =
-    useState(post._count.likes);
+  const [likeCount, setLikeCount] = useState(
+    post._count.likes,
+  );
 
   // ==========================================
   // GET CURRENT USER
@@ -234,8 +229,6 @@ export default function PostCard({
         );
       }
 
-      // Backend already returns
-      // the exact latest state.
       setLiked(data.liked);
       setLikeCount(data.likeCount);
     } catch (error) {
@@ -404,18 +397,18 @@ export default function PostCard({
       {/* POST CARD */}
       {/* ================================= */}
 
-      <article className="relative rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+      <article className="group relative overflow-visible rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-lg">
         {/* ================================= */}
         {/* AUTHOR HEADER */}
         {/* ================================= */}
 
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
           {/* Author */}
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {/* Avatar */}
             <Link
               href={`/profile/${post.author.id}`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600 transition hover:bg-blue-200"
+              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white ring-2 ring-blue-50 transition-all duration-200 hover:scale-105 hover:ring-blue-100 sm:h-12 sm:w-12"
             >
               {post.author.profileImage ? (
                 <img
@@ -431,19 +424,25 @@ export default function PostCard({
             </Link>
 
             {/* Name + Date */}
-            <div>
+            <div className="min-w-0">
               <Link
                 href={`/profile/${post.author.id}`}
-                className="font-semibold text-gray-900 transition hover:text-blue-600"
+                className="block truncate text-sm font-bold text-gray-900 transition hover:text-blue-600 sm:text-base"
               >
                 {post.author.name}
               </Link>
 
-              <p className="text-xs text-gray-500">
-                {new Date(
-                  post.createdAt,
-                ).toLocaleDateString()}
-              </p>
+              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
+                <span>
+                  {new Date(
+                    post.createdAt,
+                  ).toLocaleDateString()}
+                </span>
+
+                <span>•</span>
+
+                <span>Developer</span>
+              </div>
             </div>
           </div>
 
@@ -452,22 +451,25 @@ export default function PostCard({
           {/* ================================= */}
 
           {isOwner && (
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
+                type="button"
                 onClick={() =>
                   setShowMenu(
                     !showMenu,
                   )
                 }
-                className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-gray-500 transition hover:bg-gray-100"
+                aria-label="Post options"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-xl leading-none text-gray-500 transition-all duration-200 hover:bg-gray-100 hover:text-gray-700"
               >
                 ⋮
               </button>
 
               {showMenu && (
-                <div className="absolute right-0 top-11 z-20 w-36 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                <div className="absolute right-0 top-11 z-30 w-40 overflow-hidden rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
                   {/* Edit */}
                   <button
+                    type="button"
                     onClick={() => {
                       setShowEditModal(
                         true,
@@ -484,13 +486,18 @@ export default function PostCard({
                         post.content,
                       );
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-700 transition hover:bg-gray-50"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                   >
-                    ✏️ Edit
+                    <span className="text-base">
+                      ✏️
+                    </span>
+
+                    <span>Edit post</span>
                   </button>
 
                   {/* Delete */}
                   <button
+                    type="button"
                     onClick={() => {
                       setShowDeleteModal(
                         true,
@@ -499,9 +506,13 @@ export default function PostCard({
                       setShowMenu(false);
                       setError('');
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
                   >
-                    🗑️ Delete
+                    <span className="text-base">
+                      🗑️
+                    </span>
+
+                    <span>Delete post</span>
                   </button>
                 </div>
               )}
@@ -513,19 +524,19 @@ export default function PostCard({
         {/* POST CONTENT */}
         {/* ================================= */}
 
-        <div className="mt-5">
+        <div className="px-4 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5">
           {/* Title */}
           <Link
             href={`/posts/${post.id}`}
-            className="block"
+            className="group/title block"
           >
-            <h2 className="text-xl font-bold text-gray-900 transition hover:text-blue-600">
+            <h2 className="break-words text-lg font-bold leading-snug text-gray-900 transition-colors duration-200 group-hover/title:text-blue-600 sm:text-xl">
               {post.title}
             </h2>
           </Link>
 
           {/* Content */}
-          <p className="mt-2 whitespace-pre-wrap leading-7 text-gray-600">
+          <p className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600 sm:text-[15px] sm:leading-7">
             {post.content}
           </p>
 
@@ -534,11 +545,11 @@ export default function PostCard({
           {/* ================================= */}
 
           {post.image && (
-            <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
+            <div className="mt-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
               <img
                 src={`http://localhost:3000${post.image}`}
                 alt={post.title}
-                className="max-h-[500px] w-full object-cover"
+                className="max-h-[520px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
               />
             </div>
           )}
@@ -549,68 +560,69 @@ export default function PostCard({
         {/* ================================= */}
 
         {error && (
-          <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+          <div className="mx-4 mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600 sm:mx-6">
             {error}
           </div>
         )}
 
         {/* ================================= */}
-        {/* ACTIONS */}
+        {/* ACTION BAR */}
         {/* ================================= */}
 
-        <div className="mt-6 flex items-center gap-6 border-t border-gray-100 pt-4">
-          {/* LIKE */}
+        <div className="mx-4 border-t border-gray-100 py-3 sm:mx-6">
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* LIKE */}
 
-          <button
-            onClick={handleLike}
-            disabled={
-              likeLoading ||
-              likeStatusLoading
-            }
-            aria-label={
-              liked
-                ? 'Unlike post'
-                : 'Like post'
-            }
-            className={`group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-all duration-200 ${
-              liked
-                ? 'bg-red-50 text-red-500'
-                : 'text-gray-600 hover:bg-red-50 hover:text-red-500'
-            } disabled:cursor-not-allowed disabled:opacity-60`}
-          >
-            {/* Heart */}
-            <span
-              className={`text-lg transition-transform duration-200 ${
+            <button
+              type="button"
+              onClick={handleLike}
+              disabled={
+                likeLoading ||
+                likeStatusLoading
+              }
+              aria-label={
                 liked
-                  ? 'scale-110'
-                  : 'group-hover:scale-110'
-              }`}
+                  ? 'Unlike post'
+                  : 'Like post'
+              }
+              className={`group/like flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-2 text-sm font-semibold transition-all duration-200 sm:px-3 ${
+                liked
+                  ? 'bg-red-50 text-red-500'
+                  : 'text-gray-500 hover:bg-red-50 hover:text-red-500'
+              } disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              {liked ? '❤️' : '🤍'}
-            </span>
+              <span
+                className={`text-base transition-transform duration-200 sm:text-lg ${
+                  liked
+                    ? 'scale-110'
+                    : 'group-hover/like:scale-110'
+                }`}
+              >
+                {liked ? '❤️' : '🤍'}
+              </span>
 
-            {/* Count */}
-            <span>
-              {likeStatusLoading
-                ? '...'
-                : likeCount}
-            </span>
+              <span>
+                {likeStatusLoading
+                  ? '...'
+                  : likeCount}
+              </span>
 
-            <span className="hidden sm:inline">
-              {likeCount === 1
-                ? 'Like'
-                : 'Likes'}
-            </span>
-          </button>
+              <span className="hidden xs:inline sm:inline">
+                {likeCount === 1
+                  ? 'Like'
+                  : 'Likes'}
+              </span>
+            </button>
 
-          {/* COMMENTS */}
+            {/* COMMENTS */}
 
-          <CommentSection
-            postId={post.id}
-            commentCount={
-              post._count.comments
-            }
-          />
+            <CommentSection
+              postId={post.id}
+              commentCount={
+                post._count.comments
+              }
+            />
+          </div>
         </div>
       </article>
 
@@ -619,14 +631,23 @@ export default function PostCard({
       {/* ================================= */}
 
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                Edit Post
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6">
+            {/* Modal Header */}
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                  Post editor
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-gray-900">
+                  Edit Post
+                </h2>
+              </div>
 
               <button
+                type="button"
                 onClick={() => {
                   setShowEditModal(
                     false,
@@ -634,18 +655,23 @@ export default function PostCard({
 
                   setError('');
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close edit modal"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
               >
                 ✕
               </button>
             </div>
 
+            {/* Form */}
+
             <form
               onSubmit={handleUpdate}
               className="mt-6 space-y-5"
             >
+              {/* Title */}
+
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
                   Title
                 </label>
 
@@ -657,13 +683,15 @@ export default function PostCard({
                       e.target.value,
                     )
                   }
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-blue-500"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                   placeholder="Enter post title"
                 />
               </div>
 
+              {/* Content */}
+
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-semibold text-gray-700">
                   Content
                 </label>
 
@@ -674,19 +702,23 @@ export default function PostCard({
                       e.target.value,
                     )
                   }
-                  rows={5}
-                  className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-blue-500"
+                  rows={6}
+                  className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                   placeholder="Write your post..."
                 />
               </div>
 
+              {/* Error */}
+
               {error && (
-                <p className="text-sm text-red-600">
+                <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                   {error}
-                </p>
+                </div>
               )}
 
-              <div className="flex justify-end gap-3">
+              {/* Buttons */}
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -696,7 +728,7 @@ export default function PostCard({
 
                     setError('');
                   }}
-                  className="rounded-full bg-gray-100 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
+                  className="w-full rounded-full bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 sm:w-auto"
                 >
                   Cancel
                 </button>
@@ -704,7 +736,7 @@ export default function PostCard({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
                   {loading
                     ? 'Updating...'
@@ -721,9 +753,15 @@ export default function PostCard({
       {/* ================================= */}
 
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6">
+            {/* Icon */}
+
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-xl">
+              🗑️
+            </div>
+
+            <h2 className="mt-4 text-xl font-bold text-gray-900">
               Delete Post?
             </h2>
 
@@ -734,13 +772,14 @@ export default function PostCard({
             </p>
 
             {error && (
-              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
+                type="button"
                 onClick={() => {
                   setShowDeleteModal(
                     false,
@@ -748,15 +787,16 @@ export default function PostCard({
 
                   setError('');
                 }}
-                className="rounded-full bg-gray-100 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
+                className="w-full rounded-full bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 sm:w-auto"
               >
                 Cancel
               </button>
 
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={loading}
-                className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               >
                 {loading
                   ? 'Deleting...'

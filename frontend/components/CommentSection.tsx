@@ -36,21 +36,18 @@ export default function CommentSection({
   // STATES
   // ==========================================
 
-  const [comments, setComments] = useState<
-    Comment[]
-  >([]);
+  const [comments, setComments] = useState<Comment[]>(
+    [],
+  );
 
-  const [content, setContent] =
-    useState('');
+  const [content, setContent] = useState('');
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [showComments, setShowComments] =
     useState(false);
 
-  const [error, setError] =
-    useState('');
+  const [error, setError] = useState('');
 
   // ==========================================
   // EDIT COMMENT / REPLY
@@ -98,24 +95,13 @@ export default function CommentSection({
       localStorage.getItem('user');
 
     if (!storedUser) {
-      console.log(
-        'No logged-in user found',
-      );
-
       return;
     }
 
     try {
       const user = JSON.parse(storedUser);
 
-      console.log(
-        'Logged-in user:',
-        user,
-      );
-
-      setCurrentUserId(
-        Number(user.id),
-      );
+      setCurrentUserId(Number(user.id));
     } catch (error) {
       console.error(
         'Failed to parse logged-in user:',
@@ -144,13 +130,7 @@ export default function CommentSection({
         );
       }
 
-      const data =
-        await response.json();
-
-      console.log(
-        'Fetched post data:',
-        data,
-      );
+      const data = await response.json();
 
       setComments(
         Array.isArray(data.comments)
@@ -176,8 +156,7 @@ export default function CommentSection({
   // ==========================================
 
   async function handleToggleComments() {
-    const nextState =
-      !showComments;
+    const nextState = !showComments;
 
     setShowComments(nextState);
 
@@ -188,7 +167,6 @@ export default function CommentSection({
 
   // ==========================================
   // CREATE COMMENT
-  // POST /comments
   // ==========================================
 
   async function handleSubmit(
@@ -201,9 +179,7 @@ export default function CommentSection({
     }
 
     const token =
-      localStorage.getItem(
-        'accessToken',
-      );
+      localStorage.getItem('accessToken');
 
     if (!token) {
       setError(
@@ -214,7 +190,6 @@ export default function CommentSection({
     }
 
     setLoading(true);
-
     setError('');
 
     try {
@@ -232,16 +207,13 @@ export default function CommentSection({
           },
 
           body: JSON.stringify({
-            content:
-              content.trim(),
-
-            postId: postId,
+            content: content.trim(),
+            postId,
           }),
         },
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -249,11 +221,6 @@ export default function CommentSection({
             'Failed to add comment',
         );
       }
-
-      console.log(
-        'Comment created:',
-        data,
-      );
 
       setContent('');
 
@@ -276,7 +243,6 @@ export default function CommentSection({
 
   // ==========================================
   // CREATE REPLY
-  // POST /comments
   // ==========================================
 
   async function handleReply(
@@ -290,9 +256,7 @@ export default function CommentSection({
     }
 
     const token =
-      localStorage.getItem(
-        'accessToken',
-      );
+      localStorage.getItem('accessToken');
 
     if (!token) {
       setError(
@@ -303,7 +267,6 @@ export default function CommentSection({
     }
 
     setReplyLoading(true);
-
     setError('');
 
     try {
@@ -321,18 +284,14 @@ export default function CommentSection({
           },
 
           body: JSON.stringify({
-            content:
-              replyContent.trim(),
-
-            postId: postId,
-
-            parentId: parentId,
+            content: replyContent.trim(),
+            postId,
+            parentId,
           }),
         },
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -341,13 +300,7 @@ export default function CommentSection({
         );
       }
 
-      console.log(
-        'Reply created:',
-        data,
-      );
-
       setReplyContent('');
-
       setReplyingCommentId(null);
 
       await fetchComments();
@@ -374,14 +327,8 @@ export default function CommentSection({
   function handleStartEdit(
     comment: Comment,
   ) {
-    setEditingCommentId(
-      comment.id,
-    );
-
-    setEditContent(
-      comment.content,
-    );
-
+    setEditingCommentId(comment.id);
+    setEditContent(comment.content);
     setError('');
   }
 
@@ -391,15 +338,12 @@ export default function CommentSection({
 
   function handleCancelEdit() {
     setEditingCommentId(null);
-
     setEditContent('');
-
     setError('');
   }
 
   // ==========================================
   // UPDATE COMMENT / REPLY
-  // PATCH /comments/:id
   // ==========================================
 
   async function handleUpdateComment(
@@ -415,16 +359,12 @@ export default function CommentSection({
       return;
     }
 
-    if (
-      editingCommentId === null
-    ) {
+    if (editingCommentId === null) {
       return;
     }
 
     const token =
-      localStorage.getItem(
-        'accessToken',
-      );
+      localStorage.getItem('accessToken');
 
     if (!token) {
       setError(
@@ -435,7 +375,6 @@ export default function CommentSection({
     }
 
     setLoading(true);
-
     setError('');
 
     try {
@@ -453,14 +392,12 @@ export default function CommentSection({
           },
 
           body: JSON.stringify({
-            content:
-              editContent.trim(),
+            content: editContent.trim(),
           }),
         },
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -469,13 +406,7 @@ export default function CommentSection({
         );
       }
 
-      console.log(
-        'Comment updated:',
-        data,
-      );
-
       setEditingCommentId(null);
-
       setEditContent('');
 
       await fetchComments();
@@ -497,16 +428,13 @@ export default function CommentSection({
 
   // ==========================================
   // DELETE COMMENT / REPLY
-  // DELETE /comments/:id
   // ==========================================
 
   async function handleDeleteComment(
     commentId: number,
   ) {
     const token =
-      localStorage.getItem(
-        'accessToken',
-      );
+      localStorage.getItem('accessToken');
 
     if (!token) {
       setError(
@@ -516,19 +444,15 @@ export default function CommentSection({
       return;
     }
 
-    const confirmed =
-      window.confirm(
-        'Are you sure you want to delete this comment?',
-      );
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this comment?',
+    );
 
     if (!confirmed) {
       return;
     }
 
-    setDeletingCommentId(
-      commentId,
-    );
-
+    setDeletingCommentId(commentId);
     setError('');
 
     try {
@@ -544,8 +468,7 @@ export default function CommentSection({
         },
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -554,13 +477,6 @@ export default function CommentSection({
         );
       }
 
-      console.log(
-        'Comment deleted:',
-        data,
-      );
-
-      // Refetch because the deleted item
-      // can be either a comment or a reply.
       await fetchComments();
     } catch (error) {
       console.error(
@@ -583,18 +499,25 @@ export default function CommentSection({
   // ==========================================
 
   return (
-    <div className="mt-0 w-full">
+    <div className="w-full">
       {/* ===================================== */}
       {/* COMMENT BUTTON */}
       {/* ===================================== */}
 
       <button
-        onClick={
-          handleToggleComments
-        }
-        className="flex items-center gap-2 text-sm font-medium text-gray-600 transition hover:text-blue-600"
+        type="button"
+        onClick={handleToggleComments}
+        className={`group flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
+          showComments
+            ? 'bg-blue-50 text-blue-600'
+            : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+        }`}
       >
-        <span>💬</span>
+        <span
+          className="text-base transition-transform duration-200 group-hover:scale-110"
+        >
+          💬
+        </span>
 
         <span>
           {commentCount}{' '}
@@ -615,278 +538,274 @@ export default function CommentSection({
           {/* ================================= */}
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}
             </div>
           )}
 
           {/* ================================= */}
-          {/* ADD COMMENT FORM */}
+          {/* ADD COMMENT */}
           {/* ================================= */}
 
           <form
             onSubmit={handleSubmit}
-            className="mb-6 flex gap-3"
+            className="mb-7"
           >
-            <input
-              type="text"
-              value={content}
-              onChange={(e) =>
-                setContent(
-                  e.target.value,
-                )
-              }
-              placeholder="Write a comment..."
-              className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
+            <div className="flex items-start gap-3">
+              {/* Current User Avatar */}
 
-            <button
-              type="submit"
-              disabled={
-                loading ||
-                !content.trim()
-              }
-              className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading
-                ? 'Posting...'
-                : 'Post'}
-            </button>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white">
+                {currentUserId
+                  ? 'U'
+                  : '?'}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={content}
+                    onChange={(e) =>
+                      setContent(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Write a comment..."
+                    className="min-w-0 flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={
+                      loading ||
+                      !content.trim()
+                    }
+                    className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loading
+                      ? 'Posting...'
+                      : 'Post'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </form>
 
           {/* ================================= */}
           {/* COMMENTS LIST */}
           {/* ================================= */}
 
-          <div className="space-y-5">
+          <div className="space-y-6">
             {comments.length === 0 ? (
-              <p className="py-3 text-center text-sm text-gray-500">
-                No comments yet. Be
-                the first to comment!
-              </p>
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-8 text-center">
+                <div className="text-2xl">
+                  💬
+                </div>
+
+                <p className="mt-2 text-sm font-medium text-gray-700">
+                  No comments yet
+                </p>
+
+                <p className="mt-1 text-xs text-gray-400">
+                  Be the first developer to
+                  join the conversation.
+                </p>
+              </div>
             ) : (
-              comments.map(
-                (comment) => {
-                  // =================================
-                  // COMMENT OWNER
-                  // =================================
+              comments.map((comment) => {
+                const isCommentOwner =
+                  Number(currentUserId) ===
+                  Number(comment.userId);
 
-                  const isCommentOwner =
-                    Number(
-                      currentUserId,
-                    ) ===
-                    Number(
-                      comment.userId,
-                    );
+                const isEditing =
+                  editingCommentId ===
+                  comment.id;
 
-                  const isEditing =
-                    editingCommentId ===
-                    comment.id;
+                return (
+                  <div
+                    key={comment.id}
+                    className="group flex gap-3"
+                  >
+                    {/* ================================= */}
+                    {/* COMMENT AVATAR */}
+                    {/* ================================= */}
 
-                  return (
-                    <div
-                      key={comment.id}
-                      className="flex gap-3"
+                    <Link
+                      href={`/profile/${comment.user.id}`}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-sm font-bold text-blue-600 transition hover:scale-105 hover:from-blue-200 hover:to-indigo-200"
                     >
-                      {/* ========================= */}
-                      {/* AVATAR */}
-                      {/* ========================= */}
+                      {comment.user.name
+                        .charAt(0)
+                        .toUpperCase()}
+                    </Link>
 
-                      <Link
-                        href={`/profile/${comment.user.id}`}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 transition hover:bg-blue-200"
-                      >
-                        {comment.user.name
-                          .charAt(0)
-                          .toUpperCase()}
-                      </Link>
+                    {/* ================================= */}
+                    {/* COMMENT CONTENT */}
+                    {/* ================================= */}
 
-                      {/* ========================= */}
-                      {/* COMMENT BODY */}
-                      {/* ========================= */}
+                    <div className="min-w-0 flex-1">
+                      {isEditing ? (
+                        /* =============================== */
+                        /* EDIT COMMENT */
+                        /* =============================== */
 
-                      <div className="min-w-0 flex-1">
-                        {isEditing ? (
-                          /* ======================= */
-                          /* EDIT MODE */
-                          /* ======================= */
-
-                          <form
-                            onSubmit={
-                              handleUpdateComment
+                        <form
+                          onSubmit={
+                            handleUpdateComment
+                          }
+                          className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3"
+                        >
+                          <textarea
+                            value={
+                              editContent
                             }
-                            className="space-y-2"
-                          >
-                            <textarea
-                              value={
-                                editContent
-                              }
-                              onChange={(
-                                e,
-                              ) =>
-                                setEditContent(
-                                  e.target
-                                    .value,
-                                )
-                              }
-                              rows={3}
-                              autoFocus
-                              className="w-full resize-none rounded-xl border border-blue-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-100"
-                            />
+                            onChange={(e) =>
+                              setEditContent(
+                                e.target.value,
+                              )
+                            }
+                            rows={3}
+                            autoFocus
+                            className="w-full resize-none rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                          />
 
-                            <div className="flex gap-2">
-                              <button
-                                type="submit"
-                                disabled={
-                                  loading ||
-                                  !editContent.trim()
-                                }
-                                className="rounded-full bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {loading
-                                  ? 'Saving...'
-                                  : 'Save'}
-                              </button>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button
+                              type="submit"
+                              disabled={
+                                loading ||
+                                !editContent.trim()
+                              }
+                              className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {loading
+                                ? 'Saving...'
+                                : 'Save Changes'}
+                            </button>
 
+                            <button
+                              type="button"
+                              onClick={
+                                handleCancelEdit
+                              }
+                              className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          {/* ================================= */}
+                          {/* COMMENT BUBBLE */}
+                          {/* ================================= */}
+
+                          <div className="inline-block max-w-full rounded-2xl rounded-tl-md bg-gray-100 px-4 py-3">
+                            <Link
+                              href={`/profile/${comment.user.id}`}
+                              className="text-sm font-bold text-gray-900 transition hover:text-blue-600"
+                            >
+                              {
+                                comment.user
+                                  .name
+                              }
+                            </Link>
+
+                            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">
+                              {
+                                comment.content
+                              }
+                            </p>
+                          </div>
+
+                          {/* ================================= */}
+                          {/* COMMENT ACTIONS */}
+                          {/* ================================= */}
+
+                          <div className="mt-1.5 ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="text-[11px] text-gray-400">
+                              {new Date(
+                                comment.createdAt,
+                              ).toLocaleDateString()}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReplyingCommentId(
+                                  replyingCommentId ===
+                                    comment.id
+                                    ? null
+                                    : comment.id,
+                                );
+
+                                setReplyContent(
+                                  '',
+                                );
+
+                                setError('');
+                              }}
+                              className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
+                            >
+                              Reply
+                            </button>
+
+                            {isCommentOwner && (
                               <button
                                 type="button"
-                                onClick={
-                                  handleCancelEdit
+                                onClick={() =>
+                                  handleStartEdit(
+                                    comment,
+                                  )
                                 }
-                                className="rounded-full bg-gray-100 px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-200"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </form>
-                        ) : (
-                          /* ======================= */
-                          /* NORMAL MODE */
-                          /* ======================= */
-
-                          <>
-                            {/* Comment Bubble */}
-
-                            <div className="inline-block max-w-full rounded-2xl bg-gray-100 px-4 py-3">
-                              {/* User Name */}
-
-                              <Link
-                                href={`/profile/${comment.user.id}`}
-                                className="text-sm font-semibold text-gray-900 transition hover:text-blue-600"
-                              >
-                                {
-                                  comment
-                                    .user
-                                    .name
-                                }
-                              </Link>
-
-                              {/* Comment Text */}
-
-                              <p className="mt-1 break-words text-sm text-gray-600">
-                                {
-                                  comment.content
-                                }
-                              </p>
-                            </div>
-
-                            {/* ================= */}
-                            {/* DATE + ACTIONS */}
-                            {/* ================= */}
-
-                            <div className="mt-1 ml-3 flex items-center gap-3">
-                              {/* Date */}
-
-                              <p className="text-xs text-gray-400">
-                                {new Date(
-                                  comment.createdAt,
-                                ).toLocaleDateString()}
-                              </p>
-
-                              {/* ================================= */}
-                              {/* REPLY */}
-                              {/* ================================= */}
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setReplyingCommentId(
-                                    replyingCommentId ===
-                                      comment.id
-                                      ? null
-                                      : comment.id,
-                                  );
-
-                                  setReplyContent(
-                                    '',
-                                  );
-
-                                  setError('');
-                                }}
                                 className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
                               >
-                                Reply
+                                Edit
                               </button>
+                            )}
 
-                              {/* ================================= */}
-                              {/* EDIT */}
-                              {/* ================================= */}
-
-                              {isCommentOwner && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleStartEdit(
-                                      comment,
-                                    )
-                                  }
-                                  className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
-                                >
-                                  Edit
-                                </button>
-                              )}
-
-                              {/* ================================= */}
-                              {/* DELETE */}
-                              {/* ================================= */}
-
-                              {isCommentOwner && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteComment(
-                                      comment.id,
-                                    )
-                                  }
-                                  disabled={
-                                    deletingCommentId ===
-                                    comment.id
-                                  }
-                                  className="text-xs font-semibold text-gray-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {deletingCommentId ===
-                                  comment.id
-                                    ? 'Deleting...'
-                                    : 'Delete'}
-                                </button>
-                              )}
-                            </div>
-
-                            {/* ================================= */}
-                            {/* REPLY FORM */}
-                            {/* ================================= */}
-
-                            {replyingCommentId ===
-                              comment.id && (
-                              <form
-                                onSubmit={(e) =>
-                                  handleReply(
-                                    e,
+                            {isCommentOwner && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteComment(
                                     comment.id,
                                   )
                                 }
-                                className="mt-3 ml-3 flex gap-2"
+                                disabled={
+                                  deletingCommentId ===
+                                  comment.id
+                                }
+                                className="text-xs font-semibold text-gray-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                               >
+                                {deletingCommentId ===
+                                comment.id
+                                  ? 'Deleting...'
+                                  : 'Delete'}
+                              </button>
+                            )}
+                          </div>
+
+                          {/* ================================= */}
+                          {/* REPLY FORM */}
+                          {/* ================================= */}
+
+                          {replyingCommentId ===
+                            comment.id && (
+                            <form
+                              onSubmit={(e) =>
+                                handleReply(
+                                  e,
+                                  comment.id,
+                                )
+                              }
+                              className="mt-3 ml-2 flex items-start gap-2 sm:ml-3"
+                            >
+                              <div className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600 sm:flex">
+                                ↳
+                              </div>
+
+                              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
                                 <input
                                   type="text"
                                   value={
@@ -902,7 +821,7 @@ export default function CommentSection({
                                   }
                                   placeholder="Write a reply..."
                                   autoFocus
-                                  className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                  className="min-w-0 flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
                                 />
 
                                 <button
@@ -911,203 +830,195 @@ export default function CommentSection({
                                     replyLoading ||
                                     !replyContent.trim()
                                   }
-                                  className="rounded-full bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {replyLoading
                                     ? 'Replying...'
                                     : 'Reply'}
                                 </button>
-                              </form>
-                            )}
+                              </div>
+                            </form>
+                          )}
 
-                            {/* ================================= */}
-                            {/* REPLIES */}
-                            {/* ================================= */}
+                          {/* ================================= */}
+                          {/* REPLIES */}
+                          {/* ================================= */}
 
-                            {comment.replies &&
-                              comment.replies.length >
-                                0 && (
-                                <div className="mt-4 ml-8 space-y-4 border-l-2 border-gray-100 pl-4">
-                                  {comment.replies.map(
-                                    (reply) => {
-                                      const isReplyOwner =
-                                        Number(
-                                          currentUserId,
-                                        ) ===
-                                        Number(
-                                          reply.userId,
-                                        );
+                          {comment.replies &&
+                            comment.replies.length >
+                              0 && (
+                              <div className="mt-4 ml-2 space-y-4 border-l-2 border-blue-50 pl-3 sm:ml-5 sm:pl-4">
+                                {comment.replies.map(
+                                  (reply) => {
+                                    const isReplyOwner =
+                                      Number(
+                                        currentUserId,
+                                      ) ===
+                                      Number(
+                                        reply.userId,
+                                      );
 
-                                      const isReplyEditing =
-                                        editingCommentId ===
-                                        reply.id;
+                                    const isReplyEditing =
+                                      editingCommentId ===
+                                      reply.id;
 
-                                      return (
-                                        <div
-                                          key={
-                                            reply.id
-                                          }
-                                          className="flex gap-3"
+                                    return (
+                                      <div
+                                        key={
+                                          reply.id
+                                        }
+                                        className="flex gap-2.5"
+                                      >
+                                        {/* Reply Avatar */}
+
+                                        <Link
+                                          href={`/profile/${reply.user.id}`}
+                                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
                                         >
-                                          {/* Reply Avatar */}
+                                          {reply.user.name
+                                            .charAt(
+                                              0,
+                                            )
+                                            .toUpperCase()}
+                                        </Link>
 
-                                          <Link
-                                            href={`/profile/${reply.user.id}`}
-                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
-                                          >
-                                            {reply.user.name
-                                              .charAt(
-                                                0,
-                                              )
-                                              .toUpperCase()}
-                                          </Link>
+                                        {/* Reply Content */}
 
-                                          {/* Reply Body */}
-
-                                          <div className="min-w-0 flex-1">
-                                            {isReplyEditing ? (
-                                              /* ===================== */
-                                              /* EDIT REPLY */
-                                              /* ===================== */
-
-                                              <form
-                                                onSubmit={
-                                                  handleUpdateComment
+                                        <div className="min-w-0 flex-1">
+                                          {isReplyEditing ? (
+                                            <form
+                                              onSubmit={
+                                                handleUpdateComment
+                                              }
+                                              className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3"
+                                            >
+                                              <textarea
+                                                value={
+                                                  editContent
                                                 }
-                                                className="space-y-2"
-                                              >
-                                                <textarea
-                                                  value={
-                                                    editContent
-                                                  }
-                                                  onChange={(
-                                                    e,
-                                                  ) =>
-                                                    setEditContent(
-                                                      e
-                                                        .target
-                                                        .value,
-                                                    )
-                                                  }
-                                                  rows={
-                                                    2
-                                                  }
-                                                  autoFocus
-                                                  className="w-full resize-none rounded-xl border border-blue-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-100"
-                                                />
+                                                onChange={(
+                                                  e,
+                                                ) =>
+                                                  setEditContent(
+                                                    e
+                                                      .target
+                                                      .value,
+                                                  )
+                                                }
+                                                rows={
+                                                  2
+                                                }
+                                                autoFocus
+                                                className="w-full resize-none rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+                                              />
 
-                                                <div className="flex gap-2">
-                                                  <button
-                                                    type="submit"
-                                                    disabled={
-                                                      loading ||
-                                                      !editContent.trim()
-                                                    }
-                                                    className="rounded-full bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                                  >
-                                                    {loading
-                                                      ? 'Saving...'
-                                                      : 'Save'}
-                                                  </button>
+                                              <div className="mt-2 flex flex-wrap gap-2">
+                                                <button
+                                                  type="submit"
+                                                  disabled={
+                                                    loading ||
+                                                    !editContent.trim()
+                                                  }
+                                                  className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                  {loading
+                                                    ? 'Saving...'
+                                                    : 'Save'}
+                                                </button>
 
+                                                <button
+                                                  type="button"
+                                                  onClick={
+                                                    handleCancelEdit
+                                                  }
+                                                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-50"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            </form>
+                                          ) : (
+                                            <>
+                                              {/* Reply Bubble */}
+
+                                              <div className="inline-block max-w-full rounded-2xl rounded-tl-md bg-gray-50 px-3.5 py-2.5 ring-1 ring-gray-100">
+                                                <Link
+                                                  href={`/profile/${reply.user.id}`}
+                                                  className="text-xs font-bold text-gray-900 transition hover:text-blue-600"
+                                                >
+                                                  {
+                                                    reply
+                                                      .user
+                                                      .name
+                                                  }
+                                                </Link>
+
+                                                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">
+                                                  {
+                                                    reply.content
+                                                  }
+                                                </p>
+                                              </div>
+
+                                              {/* Reply Actions */}
+
+                                              <div className="mt-1.5 ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                                <span className="text-[11px] text-gray-400">
+                                                  {new Date(
+                                                    reply.createdAt,
+                                                  ).toLocaleDateString()}
+                                                </span>
+
+                                                {isReplyOwner && (
                                                   <button
                                                     type="button"
-                                                    onClick={
-                                                      handleCancelEdit
+                                                    onClick={() =>
+                                                      handleStartEdit(
+                                                        reply,
+                                                      )
                                                     }
-                                                    className="rounded-full bg-gray-100 px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-200"
+                                                    className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
                                                   >
-                                                    Cancel
+                                                    Edit
                                                   </button>
-                                                </div>
-                                              </form>
-                                            ) : (
-                                              <>
-                                                {/* Reply Bubble */}
+                                                )}
 
-                                                <div className="inline-block max-w-full rounded-2xl bg-gray-50 px-4 py-2.5">
-                                                  <Link
-                                                    href={`/profile/${reply.user.id}`}
-                                                    className="text-xs font-semibold text-gray-900 transition hover:text-blue-600"
-                                                  >
-                                                    {
-                                                      reply
-                                                        .user
-                                                        .name
+                                                {isReplyOwner && (
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      handleDeleteComment(
+                                                        reply.id,
+                                                      )
                                                     }
-                                                  </Link>
-
-                                                  <p className="mt-1 break-words text-sm text-gray-600">
-                                                    {
-                                                      reply.content
-                                                    }
-                                                  </p>
-                                                </div>
-
-                                                {/* Reply Date + Actions */}
-
-                                                <div className="mt-1 ml-3 flex items-center gap-3">
-                                                  <p className="text-xs text-gray-400">
-                                                    {new Date(
-                                                      reply.createdAt,
-                                                    ).toLocaleDateString()}
-                                                  </p>
-
-                                                  {/* Edit Reply */}
-
-                                                  {isReplyOwner && (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                        handleStartEdit(
-                                                          reply,
-                                                        )
-                                                      }
-                                                      className="text-xs font-semibold text-gray-500 transition hover:text-blue-600"
-                                                    >
-                                                      Edit
-                                                    </button>
-                                                  )}
-
-                                                  {/* Delete Reply */}
-
-                                                  {isReplyOwner && (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                        handleDeleteComment(
-                                                          reply.id,
-                                                        )
-                                                      }
-                                                      disabled={
-                                                        deletingCommentId ===
-                                                        reply.id
-                                                      }
-                                                      className="text-xs font-semibold text-gray-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                      {deletingCommentId ===
+                                                    disabled={
+                                                      deletingCommentId ===
                                                       reply.id
-                                                        ? 'Deleting...'
-                                                        : 'Delete'}
-                                                    </button>
-                                                  )}
-                                                </div>
-                                              </>
-                                            )}
-                                          </div>
+                                                    }
+                                                    className="text-xs font-semibold text-gray-500 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                                  >
+                                                    {deletingCommentId ===
+                                                    reply.id
+                                                      ? 'Deleting...'
+                                                      : 'Delete'}
+                                                  </button>
+                                                )}
+                                              </div>
+                                            </>
+                                          )}
                                         </div>
-                                      );
-                                    },
-                                  )}
-                                </div>
-                              )}
-                          </>
-                        )}
-                      </div>
+                                      </div>
+                                    );
+                                  },
+                                )}
+                              </div>
+                            )}
+                        </>
+                      )}
                     </div>
-                  );
-                },
-              )
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

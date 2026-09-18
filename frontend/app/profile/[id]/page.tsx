@@ -35,6 +35,7 @@ interface Post {
   id: number;
   title: string;
   content: string;
+  image?: string | null;
   createdAt: string;
 
   author: {
@@ -135,7 +136,7 @@ function ProfilePageContent() {
     useState('');
 
   // ==========================================
-  // CURRENT LOGGED-IN USER
+  // CURRENT USER
   // ==========================================
 
   const [currentUserId, setCurrentUserId] =
@@ -186,7 +187,7 @@ function ProfilePageContent() {
         setError('');
 
         // ======================================
-        // FETCH USER PROFILE
+        // FETCH USER
         // ======================================
 
         const userResponse =
@@ -253,7 +254,7 @@ function ProfilePageContent() {
         setUser(normalizedUser);
 
         // ======================================
-        // FETCH ALL POSTS
+        // FETCH POSTS
         // ======================================
 
         const postsResponse =
@@ -273,18 +274,10 @@ function ProfilePageContent() {
           );
         }
 
-        // ======================================
-        // HANDLE PAGINATED RESPONSE
-        // ======================================
-
         const allPosts: Post[] =
           Array.isArray(postsData)
             ? postsData
             : postsData?.data || [];
-
-        // ======================================
-        // FILTER USER POSTS
-        // ======================================
 
         const userPosts =
           allPosts.filter(
@@ -365,10 +358,6 @@ function ProfilePageContent() {
     const trimmedBio =
       editBio.trim();
 
-    // ========================================
-    // VALIDATE NAME
-    // ========================================
-
     if (!trimmedName) {
       setError(
         'Name cannot be empty.',
@@ -384,10 +373,6 @@ function ProfilePageContent() {
 
       return;
     }
-
-    // ========================================
-    // VALIDATE BIO
-    // ========================================
 
     if (trimmedBio.length > 160) {
       setError(
@@ -434,10 +419,6 @@ function ProfilePageContent() {
         );
       }
 
-      // ========================================
-      // UPDATE PROFILE UI
-      // ========================================
-
       if (data?.user) {
         setUser(
           (previousUser) => {
@@ -447,19 +428,12 @@ function ProfilePageContent() {
 
             return {
               ...previousUser,
-
-              name:
-                data.user.name,
-
+              name: data.user.name,
               bio:
                 data.user.bio || null,
             };
           },
         );
-
-        // ======================================
-        // UPDATE LOCAL STORAGE USER
-        // ======================================
 
         const storedUser =
           localStorage.getItem('user');
@@ -473,10 +447,8 @@ function ProfilePageContent() {
               'user',
               JSON.stringify({
                 ...parsedUser,
-
                 name:
                   data.user.name,
-
                 bio:
                   data.user.bio || null,
               }),
@@ -489,10 +461,6 @@ function ProfilePageContent() {
           }
         }
       }
-
-      // ========================================
-      // CLOSE MODAL
-      // ========================================
 
       setEditProfileOpen(false);
     } catch (error) {
@@ -559,10 +527,7 @@ function ProfilePageContent() {
       const formData =
         new FormData();
 
-      formData.append(
-        'file',
-        file,
-      );
+      formData.append('file', file);
 
       const response =
         await fetch(
@@ -703,10 +668,7 @@ function ProfilePageContent() {
       const formData =
         new FormData();
 
-      formData.append(
-        'file',
-        file,
-      );
+      formData.append('file', file);
 
       const response =
         await fetch(
@@ -775,7 +737,7 @@ function ProfilePageContent() {
   }
 
   // ==========================================
-  // FOLLOW USER
+  // FOLLOW
   // ==========================================
 
   async function handleFollow() {
@@ -858,7 +820,7 @@ function ProfilePageContent() {
   }
 
   // ==========================================
-  // UNFOLLOW USER
+  // UNFOLLOW
   // ==========================================
 
   async function handleUnfollow() {
@@ -949,13 +911,34 @@ function ProfilePageContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-4xl px-4 py-10">
-          <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-            <p className="text-gray-500">
-              Loading profile...
-            </p>
+        <main className="mx-auto max-w-4xl px-4 py-8">
+          <div className="animate-pulse overflow-hidden rounded-3xl bg-white shadow-sm">
+            <div className="h-48 bg-gray-200 sm:h-56" />
+
+            <div className="px-5 pb-7 sm:px-7">
+              <div className="-mt-12">
+                <div className="h-24 w-24 rounded-full border-4 border-white bg-gray-200" />
+              </div>
+
+              <div className="mt-5 h-6 w-40 rounded bg-gray-200" />
+
+              <div className="mt-2 h-4 w-64 rounded bg-gray-100" />
+
+              <div className="mt-5 h-4 w-full max-w-lg rounded bg-gray-100" />
+
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {Array.from({
+                  length: 5,
+                }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-20 rounded-2xl bg-gray-100"
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -967,24 +950,28 @@ function ProfilePageContent() {
   if (error && !user) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-4xl px-4 py-10">
-          <div className="rounded-2xl bg-red-50 p-6 text-center">
-            <h2 className="text-lg font-semibold text-red-700">
+        <main className="mx-auto max-w-4xl px-4 py-10">
+          <div className="rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-xl">
+              ⚠️
+            </div>
+
+            <h2 className="mt-4 text-lg font-bold text-gray-900">
               Something went wrong
             </h2>
 
-            <p className="mt-2 text-red-600">
+            <p className="mt-2 text-sm text-red-600">
               {error}
             </p>
 
             <Link
               href="/"
-              className="mt-5 inline-block rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-6 inline-flex rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
             >
               Back to Home
             </Link>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -996,33 +983,37 @@ function ProfilePageContent() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-4xl px-4 py-10">
-          <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900">
+        <main className="mx-auto max-w-4xl px-4 py-10">
+          <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
+            <div className="text-3xl">
+              👤
+            </div>
+
+            <h2 className="mt-4 text-xl font-bold text-gray-900">
               User not found
             </h2>
 
             <Link
               href="/"
-              className="mt-5 inline-block text-blue-600 hover:underline"
+              className="mt-5 inline-flex text-sm font-semibold text-blue-600 hover:text-blue-700"
             >
-              Back to Home
+              ← Back to Home
             </Link>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
   // ==========================================
-  // CHECK OWN PROFILE
+  // PROFILE CHECK
   // ==========================================
 
   const isOwnProfile =
     currentUserId === user.id;
 
   // ==========================================
-  // IMAGE URL
+  // IMAGE URLS
   // ==========================================
 
   const profileImageUrl =
@@ -1041,36 +1032,54 @@ function ProfilePageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="mx-auto max-w-4xl px-3 py-5 sm:px-4 sm:py-8">
 
-        {/* BACK BUTTON */}
+        {/* ======================================
+            BACK BUTTON
+        ====================================== */}
 
         <Link
           href="/"
-          className="mb-6 inline-flex items-center text-sm font-medium text-gray-600 hover:text-blue-600"
+          className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-white hover:text-blue-600 sm:mb-6"
         >
-          ← Back to Feed
+          <span>←</span>
+          <span>Back to Feed</span>
         </Link>
 
-        {/* PROFILE CARD */}
+        {/* ======================================
+            PROFILE CARD
+        ====================================== */}
 
-        <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
+        <section className="overflow-hidden rounded-3xl border border-gray-200/70 bg-white shadow-sm">
 
-          {/* COVER PHOTO */}
+          {/* ====================================
+              COVER
+          ==================================== */}
 
           <div
-            className={`relative h-48 sm:h-56 ${
+            className={`relative h-44 overflow-hidden sm:h-60 ${
               coverImageUrl
                 ? 'bg-gray-200'
-                : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
+                : 'bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600'
             }`}
           >
-            {coverImageUrl && (
+            {coverImageUrl ? (
               <img
                 src={coverImageUrl}
                 alt={`${user.name}'s cover`}
                 className="h-full w-full object-cover"
               />
+            ) : (
+              <>
+                <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+                <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+              </>
+            )}
+
+            {/* COVER OVERLAY */}
+
+            {coverImageUrl && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
             )}
 
             {/* CHANGE COVER */}
@@ -1085,13 +1094,13 @@ function ProfilePageContent() {
                   disabled={
                     coverImageLoading
                   }
-                  className="absolute right-4 top-4 rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/70 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/40 px-3.5 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-md transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-50 sm:right-5 sm:top-5 sm:px-4 sm:text-sm"
                 >
                   {coverImageLoading
                     ? 'Uploading...'
                     : coverImageUrl
-                      ? 'Change Cover'
-                      : 'Add Cover'}
+                      ? '📷 Change Cover'
+                      : '📷 Add Cover'}
                 </button>
 
                 <input
@@ -1109,11 +1118,15 @@ function ProfilePageContent() {
             )}
           </div>
 
-          {/* PROFILE INFO */}
+          {/* ====================================
+              PROFILE DETAILS
+          ==================================== */}
 
-          <div className="px-6 pb-6">
+          <div className="px-4 pb-6 sm:px-7 sm:pb-7">
 
-            <div className="-mt-12 flex flex-col items-start sm:flex-row sm:items-end sm:justify-between">
+            {/* PROFILE IMAGE + ACTION */}
+
+            <div className="-mt-12 flex flex-col items-start sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
 
               {/* PROFILE IMAGE */}
 
@@ -1123,17 +1136,17 @@ function ProfilePageContent() {
                   <img
                     src={profileImageUrl}
                     alt={user.name}
-                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md"
+                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-lg sm:h-28 sm:w-28"
                   />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-blue-100 text-3xl font-bold text-blue-600 shadow-md">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-100 to-indigo-100 text-3xl font-bold text-blue-600 shadow-lg sm:h-28 sm:w-28 sm:text-4xl">
                     {user.name
                       .charAt(0)
                       .toUpperCase()}
                   </div>
                 )}
 
-                {/* CHANGE PROFILE IMAGE */}
+                {/* PROFILE IMAGE BUTTON */}
 
                 {isOwnProfile && (
                   <>
@@ -1145,8 +1158,8 @@ function ProfilePageContent() {
                       disabled={
                         profileImageLoading
                       }
-                      className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-sm text-white shadow-md transition hover:bg-blue-700 disabled:opacity-50"
                       title="Change profile picture"
+                      className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-sm text-white shadow-md transition hover:scale-105 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {profileImageLoading
                         ? '...'
@@ -1168,157 +1181,222 @@ function ProfilePageContent() {
                 )}
               </div>
 
-              {/* FOLLOW / EDIT BUTTON */}
+              {/* ACTION BUTTON */}
 
-              {isOwnProfile ? (
-                <button
-                  type="button"
-                  onClick={
-                    handleOpenEditProfile
-                  }
-                  className="mt-4 rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 sm:mt-0"
-                >
-                  ✏️ Edit Profile
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={
-                    isFollowing
-                      ? handleUnfollow
-                      : handleFollow
-                  }
-                  disabled={
-                    followLoading
-                  }
-                  className={`mt-4 rounded-full px-6 py-2.5 text-sm font-semibold transition sm:mt-0 ${
-                    isFollowing
-                      ? 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  } disabled:cursor-not-allowed disabled:opacity-50`}
-                >
-                  {followLoading
-                    ? 'Please wait...'
-                    : isFollowing
-                      ? 'Following'
-                      : 'Follow'}
-                </button>
-              )}
+              <div className="mt-4 w-full sm:mt-0 sm:w-auto">
+
+                {isOwnProfile ? (
+                  <button
+                    type="button"
+                    onClick={
+                      handleOpenEditProfile
+                    }
+                    className="w-full rounded-full border border-gray-200 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:shadow sm:w-auto"
+                  >
+                    ✏️ Edit Profile
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={
+                      isFollowing
+                        ? handleUnfollow
+                        : handleFollow
+                    }
+                    disabled={
+                      followLoading
+                    }
+                    className={`w-full rounded-full px-6 py-2.5 text-sm font-semibold shadow-sm transition sm:w-auto ${
+                      isFollowing
+                        ? 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
+                    } disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    {followLoading
+                      ? 'Please wait...'
+                      : isFollowing
+                        ? '✓ Following'
+                        : '+ Follow'}
+                  </button>
+                )}
+
+              </div>
             </div>
 
-            {/* USER DETAILS */}
+            {/* ==================================
+                USER INFO
+            ================================== */}
 
             <div className="mt-4">
-              <h1 className="text-2xl font-bold text-gray-900">
+
+              <h1 className="break-words text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
                 {user.name}
               </h1>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 break-all text-sm text-gray-400">
                 {user.email}
               </p>
 
-              {/* BIO */}
-
-              {user.bio && (
-                <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-gray-600">
+              {user.bio ? (
+                <p className="mt-4 max-w-2xl whitespace-pre-wrap break-words text-sm leading-6 text-gray-600 sm:text-[15px]">
                   {user.bio}
                 </p>
+              ) : (
+                isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={
+                      handleOpenEditProfile
+                    }
+                    className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    + Add a bio
+                  </button>
+                )
               )}
             </div>
 
-            {/* ERROR */}
+            {/* ==================================
+                ERROR
+            ================================== */}
 
             {error && (
-              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                {error}
+              <div className="mt-5 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <span>⚠️</span>
+                <p>{error}</p>
               </div>
             )}
 
-            {/* USER STATS */}
+            {/* ==================================
+                STATS
+            ================================== */}
 
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
 
-              <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              {/* Posts */}
+
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
                 <p className="text-xl font-bold text-gray-900">
                   {Number(
                     user._count.posts,
                   ) || 0}
                 </p>
 
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs font-medium text-gray-500">
                   Posts
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              {/* Followers */}
+
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
                 <p className="text-xl font-bold text-gray-900">
                   {Number(
                     user._count.followers,
                   ) || 0}
                 </p>
 
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs font-medium text-gray-500">
                   Followers
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              {/* Following */}
+
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
                 <p className="text-xl font-bold text-gray-900">
                   {Number(
                     user._count.following,
                   ) || 0}
                 </p>
 
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs font-medium text-gray-500">
                   Following
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              {/* Comments */}
+
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
                 <p className="text-xl font-bold text-gray-900">
                   {Number(
                     user._count.comments,
                   ) || 0}
                 </p>
 
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs font-medium text-gray-500">
                   Comments
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              {/* Likes */}
+
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
                 <p className="text-xl font-bold text-gray-900">
                   {Number(
                     user._count.likes,
                   ) || 0}
                 </p>
 
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs font-medium text-gray-500">
                   Likes
                 </p>
               </div>
 
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* USER POSTS */}
+        {/* ======================================
+            USER POSTS
+        ====================================== */}
 
-        <div className="mt-8">
+        <section className="mt-8">
 
-          <h2 className="mb-5 text-xl font-bold text-gray-900">
-            {user.name}'s Posts
-          </h2>
+          <div className="mb-5 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                Activity
+              </p>
+
+              <h2 className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+                {user.name}'s Posts
+              </h2>
+            </div>
+
+            <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
+              {posts.length}{' '}
+              {posts.length === 1
+                ? 'post'
+                : 'posts'}
+            </span>
+          </div>
 
           {posts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
-              <p className="font-medium text-gray-700">
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-5 py-12 text-center shadow-sm">
+
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
+                📝
+              </div>
+
+              <p className="mt-4 font-semibold text-gray-800">
                 No posts yet
               </p>
 
-              <p className="mt-2 text-sm text-gray-500">
-                This user hasn't shared any posts yet.
+              <p className="mt-1 text-sm text-gray-500">
+                {isOwnProfile
+                  ? 'Share your first post with the developer community.'
+                  : "This user hasn't shared any posts yet."}
               </p>
+
+              {isOwnProfile && (
+                <Link
+                  href="/"
+                  className="mt-5 inline-flex rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  Create a Post
+                </Link>
+              )}
             </div>
           ) : (
             <div className="space-y-5">
@@ -1326,15 +1404,14 @@ function ProfilePageContent() {
               {posts.map((post) => (
                 <article
                   key={post.id}
-                  className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+                  className="group overflow-hidden rounded-2xl border border-gray-200/70 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                 >
 
                   {/* POST HEADER */}
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
 
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
-
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 font-bold text-blue-600">
                       {post.author.profileImage ? (
                         <img
                           src={`http://localhost:3000${post.author.profileImage}`}
@@ -1346,67 +1423,75 @@ function ProfilePageContent() {
                           .charAt(0)
                           .toUpperCase()
                       )}
-
                     </div>
 
-                    <div>
-                      <p className="font-semibold text-gray-900">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-gray-900">
                         {post.author.name}
                       </p>
 
-                      <p className="text-xs text-gray-500">
+                      <p className="mt-0.5 text-xs text-gray-400">
                         {new Date(
                           post.createdAt,
                         ).toLocaleDateString()}
                       </p>
                     </div>
-
                   </div>
 
                   {/* POST CONTENT */}
 
-                  <div className="mt-5">
-
-                    <h3 className="text-lg font-bold text-gray-900">
+                  <Link
+                    href={`/posts/${post.id}`}
+                    className="block px-4 pb-4 pt-4 sm:px-6 sm:pb-5"
+                  >
+                    <h3 className="break-words text-lg font-bold leading-snug text-gray-900 transition group-hover:text-blue-600 sm:text-xl">
                       {post.title}
                     </h3>
 
-                    <p className="mt-2 whitespace-pre-wrap text-gray-600">
+                    <p className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600 sm:text-[15px] sm:leading-7">
                       {post.content}
                     </p>
 
-                  </div>
+                    {/* POST IMAGE */}
+
+                    {post.image && (
+                      <div className="mt-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
+                        <img
+                          src={`http://localhost:3000${post.image}`}
+                          alt={post.title}
+                          className="max-h-[500px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
+                        />
+                      </div>
+                    )}
+                  </Link>
 
                   {/* POST STATS */}
 
-                  <div className="mt-5 flex items-center gap-6 border-t border-gray-100 pt-4 text-sm text-gray-500">
+                  <div className="mx-4 border-t border-gray-100 py-3 sm:mx-6">
+                    <div className="flex items-center gap-4 text-xs font-semibold text-gray-500 sm:gap-6 sm:text-sm">
+                      <span>
+                        ❤️{' '}
+                        {Number(
+                          post._count.likes,
+                        ) || 0}{' '}
+                        Likes
+                      </span>
 
-                    <span>
-                      ❤️{' '}
-                      {Number(
-                        post._count.likes,
-                      ) || 0}{' '}
-                      Likes
-                    </span>
-
-                    <span>
-                      💬{' '}
-                      {Number(
-                        post._count.comments,
-                      ) || 0}{' '}
-                      Comments
-                    </span>
-
+                      <span>
+                        💬{' '}
+                        {Number(
+                          post._count.comments,
+                        ) || 0}{' '}
+                        Comments
+                      </span>
+                    </div>
                   </div>
-
                 </article>
               ))}
 
             </div>
           )}
-
-        </div>
-
+        </section>
       </main>
 
       {/* =====================================================
@@ -1415,13 +1500,13 @@ function ProfilePageContent() {
 
       {editProfileOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 px-4 py-6 backdrop-blur-sm"
           onMouseDown={
             handleCloseEditProfile
           }
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6"
             onMouseDown={(event) =>
               event.stopPropagation()
             }
@@ -1429,9 +1514,14 @@ function ProfilePageContent() {
 
             {/* MODAL HEADER */}
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4">
+
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                  Profile settings
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-gray-900">
                   Edit Profile
                 </h2>
 
@@ -1448,7 +1538,7 @@ function ProfilePageContent() {
                 disabled={
                   editProfileLoading
                 }
-                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
               >
                 ✕
               </button>
@@ -1466,7 +1556,7 @@ function ProfilePageContent() {
               {/* NAME */}
 
               <div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <label
                     htmlFor="profile-name"
                     className="text-sm font-semibold text-gray-700"
@@ -1492,7 +1582,7 @@ function ProfilePageContent() {
                   disabled={
                     editProfileLoading
                   }
-                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-gray-100"
                   placeholder="Enter your name"
                 />
               </div>
@@ -1500,7 +1590,7 @@ function ProfilePageContent() {
               {/* BIO */}
 
               <div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <label
                     htmlFor="profile-bio"
                     className="text-sm font-semibold text-gray-700"
@@ -1526,22 +1616,23 @@ function ProfilePageContent() {
                   disabled={
                     editProfileLoading
                   }
-                  className="mt-2 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-gray-100"
                   placeholder="Tell people a little about yourself..."
                 />
               </div>
 
-              {/* MODAL ERROR */}
+              {/* ERROR */}
 
               {error && (
-                <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-                  {error}
+                <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  <span>⚠️</span>
+                  <p>{error}</p>
                 </div>
               )}
 
               {/* BUTTONS */}
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
 
                 <button
                   type="button"
@@ -1551,7 +1642,7 @@ function ProfilePageContent() {
                   disabled={
                     editProfileLoading
                   }
-                  className="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
                   Cancel
                 </button>
@@ -1561,15 +1652,19 @@ function ProfilePageContent() {
                   disabled={
                     editProfileLoading
                   }
-                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
-                  {editProfileLoading
-                    ? 'Saving...'
-                    : 'Save Changes'}
+                  {editProfileLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      Saving...
+                    </span>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
 
               </div>
-
             </form>
           </div>
         </div>
