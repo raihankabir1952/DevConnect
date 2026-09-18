@@ -7,6 +7,14 @@ import {
   useState,
 } from 'react';
 
+import {
+  Bell,
+  BellOff,
+  Heart,
+  MessageCircle,
+  Reply,
+} from 'lucide-react';
+
 interface User {
   id: number;
   name: string;
@@ -88,7 +96,10 @@ export default function Navbar() {
   // REFS
   // ==========================================
 
-  const searchRef =
+  const desktopSearchRef =
+    useRef<HTMLDivElement>(null);
+
+  const mobileSearchRef =
     useRef<HTMLDivElement>(null);
 
   const notificationRef =
@@ -450,8 +461,19 @@ export default function Navbar() {
         event.target as Node;
 
       if (
-        searchRef.current &&
-        !searchRef.current.contains(target)
+        desktopSearchRef.current &&
+        !desktopSearchRef.current.contains(
+          target,
+        )
+      ) {
+        setShowResults(false);
+      }
+
+      if (
+        mobileSearchRef.current &&
+        !mobileSearchRef.current.contains(
+          target,
+        )
       ) {
         setShowResults(false);
       }
@@ -633,7 +655,7 @@ export default function Navbar() {
         {/* ======================================== */}
 
         <div
-          ref={searchRef}
+          ref={desktopSearchRef}
           className="relative ml-2 hidden w-full max-w-md md:block"
         >
           <div className="relative">
@@ -771,9 +793,7 @@ export default function Navbar() {
                 }`}
                 aria-label="Notifications"
               >
-                <span className="text-lg">
-                  🔔
-                </span>
+                <Bell className="h-5 w-5" />
 
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[9px] font-bold text-white">
@@ -784,22 +804,31 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* Notification Dropdown */}
+              {/* ==================================== */}
+              {/* NOTIFICATION DROPDOWN */}
+              {/* ==================================== */}
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-[390px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-300/40">
 
                   {/* Header */}
 
-                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5">
                     <div>
-                      <h3 className="font-bold text-gray-900">
+                      <h3 className="text-sm font-bold text-gray-900">
                         Notifications
                       </h3>
 
-                      {unreadCount > 0 && (
+                      {unreadCount > 0 ? (
                         <p className="mt-0.5 text-xs text-gray-500">
-                          {unreadCount} unread
+                          {unreadCount} unread notification
+                          {unreadCount !== 1
+                            ? 's'
+                            : ''}
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-xs text-gray-400">
+                          You're all caught up
                         </p>
                       )}
                     </div>
@@ -810,7 +839,7 @@ export default function Navbar() {
                         onClick={
                           markAllNotificationsAsRead
                         }
-                        className="rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
                       >
                         Mark all read
                       </button>
@@ -819,123 +848,203 @@ export default function Navbar() {
 
                   {/* Notification List */}
 
-                  <div className="max-h-[420px] overflow-y-auto">
+                  <div className="max-h-[430px] overflow-y-auto">
                     {notificationLoading &&
                     notifications.length === 0 ? (
-                      <div className="px-4 py-10 text-center">
-                        <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
+                      <div className="space-y-4 px-4 py-5">
+                        {[1, 2, 3].map(
+                          (item) => (
+                            <div
+                              key={item}
+                              className="flex animate-pulse gap-3"
+                            >
+                              <div className="h-11 w-11 shrink-0 rounded-full bg-gray-200" />
 
-                        <p className="mt-3 text-sm text-gray-500">
-                          Loading notifications...
-                        </p>
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <div className="h-3.5 w-3/4 rounded bg-gray-200" />
+
+                                <div className="h-3 w-1/2 rounded bg-gray-100" />
+
+                                <div className="h-2.5 w-1/4 rounded bg-gray-100" />
+                              </div>
+                            </div>
+                          ),
+                        )}
                       </div>
                     ) : notifications.length ===
                       0 ? (
-                      <div className="px-4 py-10 text-center">
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-xl">
-                          🔔
+                      <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+                        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                          <BellOff className="h-6 w-6 text-gray-400" />
                         </div>
 
-                        <p className="mt-3 text-sm font-semibold text-gray-700">
+                        <p className="text-sm font-semibold text-gray-800">
                           No notifications yet
                         </p>
 
-                        <p className="mt-1 text-xs text-gray-400">
-                          Your notifications will
-                          appear here.
+                        <p className="mt-1 max-w-[240px] text-xs leading-5 text-gray-400">
+                          When someone likes,
+                          comments, or replies to
+                          your posts, you'll see it
+                          here.
                         </p>
                       </div>
                     ) : (
-                      notifications.map(
-                        (notification) => {
-                          const actorImage =
-                            getProfileImageUrl(
-                              notification
-                                .actor
-                                ?.profileImage,
-                            );
+                      <div className="divide-y divide-gray-100">
+                        {notifications.map(
+                          (notification) => {
+                            const actorImage =
+                              getProfileImageUrl(
+                                notification
+                                  .actor
+                                  ?.profileImage,
+                              );
 
-                          return (
-                            <button
-                              key={
-                                notification.id
-                              }
-                              type="button"
-                              onClick={() =>
-                                handleNotificationClick(
-                                  notification,
-                                )
-                              }
-                              className={`flex w-full gap-3 border-b border-gray-100 px-4 py-3.5 text-left transition last:border-b-0 hover:bg-gray-50 ${
-                                !notification.isRead
-                                  ? 'bg-blue-50/60'
-                                  : 'bg-white'
-                              }`}
-                            >
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
-                                {actorImage ? (
-                                  <img
-                                    src={
-                                      actorImage
-                                    }
-                                    alt={
-                                      notification
-                                        .actor
-                                        ?.name ||
-                                      'User'
-                                    }
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  notification.actor?.name
-                                    ?.charAt(
-                                      0,
-                                    )
-                                    .toUpperCase() ||
-                                  'U'
-                                )}
-                              </div>
+                            const actorName =
+                              notification.actor
+                                ?.name ||
+                              'Someone';
 
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm leading-5 text-gray-700">
-                                  <span className="font-bold text-gray-900">
-                                    {
-                                      notification
-                                        .actor
-                                        ?.name
-                                    }
-                                  </span>{' '}
-                                  {
-                                    notification.message
-                                  }
-                                </p>
+                            return (
+                              <button
+                                key={
+                                  notification.id
+                                }
+                                type="button"
+                                onClick={() =>
+                                  handleNotificationClick(
+                                    notification,
+                                  )
+                                }
+                                className={`group flex w-full gap-3 px-4 py-3.5 text-left transition ${
+                                  notification.isRead
+                                    ? 'bg-white hover:bg-gray-50'
+                                    : 'bg-blue-50/60 hover:bg-blue-50'
+                                }`}
+                              >
+                                {/* Actor Avatar */}
 
-                                {notification.post && (
-                                  <p className="mt-1 truncate rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600">
-                                    {
-                                      notification
-                                        .post
-                                        .title
-                                    }
-                                  </p>
-                                )}
+                                <div className="relative shrink-0">
+                                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold text-blue-600 ring-2 ring-white">
+                                    {actorImage ? (
+                                      <img
+                                        src={
+                                          actorImage
+                                        }
+                                        alt={
+                                          actorName
+                                        }
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      actorName
+                                        .charAt(
+                                          0,
+                                        )
+                                        .toUpperCase()
+                                    )}
+                                  </div>
 
-                                <p className="mt-1 text-[11px] text-gray-400">
-                                  {formatNotificationTime(
-                                    notification.createdAt,
+                                  {/* Notification Type Icon */}
+
+                                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-100">
+                                    {notification.type
+                                      .toUpperCase()
+                                      .includes(
+                                        'LIKE',
+                                      ) ? (
+                                      <Heart className="h-3 w-3 fill-red-500 text-red-500" />
+                                    ) : notification.type
+                                        .toUpperCase()
+                                        .includes(
+                                          'REPLY',
+                                        ) ? (
+                                      <Reply className="h-3 w-3 text-purple-500" />
+                                    ) : notification.type
+                                        .toUpperCase()
+                                        .includes(
+                                          'COMMENT',
+                                        ) ? (
+                                      <MessageCircle className="h-3 w-3 text-blue-500" />
+                                    ) : (
+                                      <Bell className="h-3 w-3 text-gray-500" />
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Notification Content */}
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p
+                                      className={`text-sm leading-5 ${
+                                        notification.isRead
+                                          ? 'text-gray-700'
+                                          : 'font-medium text-gray-900'
+                                      }`}
+                                    >
+                                      <span className="font-bold text-gray-900">
+                                        {
+                                          actorName
+                                        }
+                                      </span>{' '}
+                                      {
+                                        notification.message
+                                      }
+                                    </p>
+
+                                    {/* Unread Dot */}
+
+                                    {!notification.isRead && (
+                                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                                    )}
+                                  </div>
+
+                                  {/* Related Post */}
+
+                                  {notification.post
+                                    ?.title && (
+                                    <div className="mt-1.5 flex items-center gap-1.5">
+                                      <span className="shrink-0 text-[10px] text-gray-400">
+                                        Post
+                                      </span>
+
+                                      <p className="min-w-0 truncate rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600">
+                                        {
+                                          notification
+                                            .post
+                                            .title
+                                        }
+                                      </p>
+                                    </div>
                                   )}
-                                </p>
-                              </div>
 
-                              {!notification.isRead && (
-                                <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
-                              )}
-                            </button>
-                          );
-                        },
-                      )
+                                  {/* Time */}
+
+                                  <p className="mt-1 text-[11px] text-gray-400">
+                                    {formatNotificationTime(
+                                      notification.createdAt,
+                                    )}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          },
+                        )}
+                      </div>
                     )}
                   </div>
+
+                  {/* Footer */}
+
+                  {notifications.length > 0 && (
+                    <div className="border-t border-gray-100 bg-gray-50/70 px-4 py-2.5 text-center">
+                      <p className="text-[11px] text-gray-400">
+                        Click a notification to view
+                        the related post
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1113,7 +1222,7 @@ export default function Navbar() {
 
       <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-3 md:hidden">
         <div
-          ref={searchRef}
+          ref={mobileSearchRef}
           className="relative"
         >
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">

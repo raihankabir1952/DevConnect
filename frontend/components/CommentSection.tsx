@@ -18,6 +18,7 @@ interface Comment {
   user: {
     id: number;
     name: string;
+    profileImage?: string | null;
   };
 
   replies: Comment[];
@@ -111,6 +112,27 @@ export default function CommentSection({
       setCurrentUserId(null);
     }
   }, []);
+
+  // ==========================================
+  // PROFILE IMAGE URL
+  // ==========================================
+
+  function getProfileImageUrl(
+    profileImage?: string | null,
+  ) {
+    if (!profileImage) {
+      return null;
+    }
+
+    if (
+      profileImage.startsWith('http://') ||
+      profileImage.startsWith('https://')
+    ) {
+      return profileImage;
+    }
+
+    return `http://localhost:3000${profileImage}`;
+  }
 
   // ==========================================
   // FETCH COMMENTS
@@ -513,9 +535,7 @@ export default function CommentSection({
             : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
         }`}
       >
-        <span
-          className="text-base transition-transform duration-200 group-hover:scale-110"
-        >
+        <span className="text-base transition-transform duration-200 group-hover:scale-110">
           💬
         </span>
 
@@ -621,6 +641,11 @@ export default function CommentSection({
                   editingCommentId ===
                   comment.id;
 
+                const commentImage =
+                  getProfileImageUrl(
+                    comment.user.profileImage,
+                  );
+
                 return (
                   <div
                     key={comment.id}
@@ -632,11 +657,19 @@ export default function CommentSection({
 
                     <Link
                       href={`/profile/${comment.user.id}`}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-sm font-bold text-blue-600 transition hover:scale-105 hover:from-blue-200 hover:to-indigo-200"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-sm font-bold text-blue-600 transition hover:scale-105 hover:from-blue-200 hover:to-indigo-200"
                     >
-                      {comment.user.name
-                        .charAt(0)
-                        .toUpperCase()}
+                      {commentImage ? (
+                        <img
+                          src={commentImage}
+                          alt={comment.user.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        comment.user.name
+                          .charAt(0)
+                          .toUpperCase()
+                      )}
                     </Link>
 
                     {/* ================================= */}
@@ -645,10 +678,6 @@ export default function CommentSection({
 
                     <div className="min-w-0 flex-1">
                       {isEditing ? (
-                        /* =============================== */
-                        /* EDIT COMMENT */
-                        /* =============================== */
-
                         <form
                           onSubmit={
                             handleUpdateComment
@@ -862,6 +891,12 @@ export default function CommentSection({
                                       editingCommentId ===
                                       reply.id;
 
+                                    const replyImage =
+                                      getProfileImageUrl(
+                                        reply.user
+                                          .profileImage,
+                                      );
+
                                     return (
                                       <div
                                         key={
@@ -873,13 +908,27 @@ export default function CommentSection({
 
                                         <Link
                                           href={`/profile/${reply.user.id}`}
-                                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
+                                          className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-50 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
                                         >
-                                          {reply.user.name
-                                            .charAt(
-                                              0,
-                                            )
-                                            .toUpperCase()}
+                                          {replyImage ? (
+                                            <img
+                                              src={
+                                                replyImage
+                                              }
+                                              alt={
+                                                reply
+                                                  .user
+                                                  .name
+                                              }
+                                              className="h-full w-full object-cover"
+                                            />
+                                          ) : (
+                                            reply.user.name
+                                              .charAt(
+                                                0,
+                                              )
+                                              .toUpperCase()
+                                          )}
                                         </Link>
 
                                         {/* Reply Content */}

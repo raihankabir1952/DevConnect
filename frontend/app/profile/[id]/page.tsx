@@ -173,6 +173,27 @@ function ProfilePageContent() {
   }, []);
 
   // ==========================================
+  // IMAGE URL HELPER
+  // ==========================================
+
+  function getImageUrl(
+    image?: string | null,
+  ) {
+    if (!image) {
+      return null;
+    }
+
+    if (
+      image.startsWith('http://') ||
+      image.startsWith('https://')
+    ) {
+      return image;
+    }
+
+    return `http://localhost:3000${image}`;
+  }
+
+  // ==========================================
   // FETCH PROFILE
   // ==========================================
 
@@ -911,32 +932,47 @@ function ProfilePageContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <main className="mx-auto max-w-4xl px-4 py-8">
-          <div className="animate-pulse overflow-hidden rounded-3xl bg-white shadow-sm">
-            <div className="h-48 bg-gray-200 sm:h-56" />
+        <main className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-10">
+          <div className="mb-5 h-8 w-28 animate-pulse rounded-full bg-gray-200" />
 
-            <div className="px-5 pb-7 sm:px-7">
-              <div className="-mt-12">
-                <div className="h-24 w-24 rounded-full border-4 border-white bg-gray-200" />
+          <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+            <div className="h-48 animate-pulse bg-gray-200 sm:h-64" />
+
+            <div className="px-4 pb-7 sm:px-7">
+              <div className="-mt-12 sm:-mt-14">
+                <div className="h-24 w-24 animate-pulse rounded-full border-4 border-white bg-gray-200 shadow sm:h-28 sm:w-28" />
               </div>
 
-              <div className="mt-5 h-6 w-40 rounded bg-gray-200" />
+              <div className="mt-5 h-7 w-44 animate-pulse rounded-lg bg-gray-200" />
 
-              <div className="mt-2 h-4 w-64 rounded bg-gray-100" />
+              <div className="mt-2 h-4 w-56 animate-pulse rounded bg-gray-100" />
 
-              <div className="mt-5 h-4 w-full max-w-lg rounded bg-gray-100" />
+              <div className="mt-5 h-4 w-full max-w-xl animate-pulse rounded bg-gray-100" />
 
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
                 {Array.from({
                   length: 5,
                 }).map((_, index) => (
                   <div
                     key={index}
-                    className="h-20 rounded-2xl bg-gray-100"
+                    className="h-20 animate-pulse rounded-2xl bg-gray-100"
                   />
                 ))}
               </div>
             </div>
+          </div>
+
+          <div className="mt-8 h-6 w-48 animate-pulse rounded bg-gray-200" />
+
+          <div className="mt-5 space-y-4">
+            {Array.from({
+              length: 2,
+            }).map((_, index) => (
+              <div
+                key={index}
+                className="h-44 animate-pulse rounded-2xl bg-white shadow-sm"
+              />
+            ))}
           </div>
         </main>
       </div>
@@ -950,8 +986,8 @@ function ProfilePageContent() {
   if (error && !user) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <main className="mx-auto max-w-4xl px-4 py-10">
-          <div className="rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
+        <main className="mx-auto flex min-h-screen max-w-4xl items-center justify-center px-4 py-10">
+          <div className="w-full max-w-md rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-xl">
               ⚠️
             </div>
@@ -960,13 +996,13 @@ function ProfilePageContent() {
               Something went wrong
             </h2>
 
-            <p className="mt-2 text-sm text-red-600">
+            <p className="mt-2 text-sm leading-6 text-red-600">
               {error}
             </p>
 
             <Link
               href="/"
-              className="mt-6 inline-flex rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              className="mt-6 inline-flex rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md"
             >
               Back to Home
             </Link>
@@ -983,9 +1019,9 @@ function ProfilePageContent() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <main className="mx-auto max-w-4xl px-4 py-10">
-          <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
-            <div className="text-3xl">
+        <main className="flex min-h-screen items-center justify-center px-4 py-10">
+          <div className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
               👤
             </div>
 
@@ -993,9 +1029,14 @@ function ProfilePageContent() {
               User not found
             </h2>
 
+            <p className="mt-2 text-sm text-gray-500">
+              The profile you are looking for
+              does not exist.
+            </p>
+
             <Link
               href="/"
-              className="mt-5 inline-flex text-sm font-semibold text-blue-600 hover:text-blue-700"
+              className="mt-5 inline-flex text-sm font-semibold text-blue-600 transition hover:text-blue-700"
             >
               ← Back to Home
             </Link>
@@ -1017,14 +1058,10 @@ function ProfilePageContent() {
   // ==========================================
 
   const profileImageUrl =
-    user.profileImage
-      ? `http://localhost:3000${user.profileImage}`
-      : null;
+    getImageUrl(user.profileImage);
 
   const coverImageUrl =
-    user.coverImage
-      ? `http://localhost:3000${user.coverImage}`
-      : null;
+    getImageUrl(user.coverImage);
 
   // ==========================================
   // RENDER
@@ -1042,8 +1079,13 @@ function ProfilePageContent() {
           href="/"
           className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-white hover:text-blue-600 sm:mb-6"
         >
-          <span>←</span>
-          <span>Back to Feed</span>
+          <span className="text-base">
+            ←
+          </span>
+
+          <span>
+            Back to Feed
+          </span>
         </Link>
 
         {/* ======================================
@@ -1057,7 +1099,7 @@ function ProfilePageContent() {
           ==================================== */}
 
           <div
-            className={`relative h-44 overflow-hidden sm:h-60 ${
+            className={`relative h-44 overflow-hidden sm:h-64 ${
               coverImageUrl
                 ? 'bg-gray-200'
                 : 'bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600'
@@ -1071,18 +1113,19 @@ function ProfilePageContent() {
               />
             ) : (
               <>
-                <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-                <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+                <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+
+                <div className="absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-transparent to-purple-600/20" />
               </>
             )}
 
-            {/* COVER OVERLAY */}
-
             {coverImageUrl && (
-              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/5" />
             )}
 
-            {/* CHANGE COVER */}
+            {/* COVER BUTTON */}
 
             {isOwnProfile && (
               <>
@@ -1122,7 +1165,7 @@ function ProfilePageContent() {
               PROFILE DETAILS
           ==================================== */}
 
-          <div className="px-4 pb-6 sm:px-7 sm:pb-7">
+          <div className="px-4 pb-7 sm:px-7 sm:pb-8">
 
             {/* PROFILE IMAGE + ACTION */}
 
@@ -1136,10 +1179,10 @@ function ProfilePageContent() {
                   <img
                     src={profileImageUrl}
                     alt={user.name}
-                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-lg sm:h-28 sm:w-28"
+                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-xl ring-1 ring-gray-100 sm:h-28 sm:w-28"
                   />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-100 to-indigo-100 text-3xl font-bold text-blue-600 shadow-lg sm:h-28 sm:w-28 sm:text-4xl">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-100 to-indigo-100 text-3xl font-bold text-blue-600 shadow-xl ring-1 ring-gray-100 sm:h-28 sm:w-28 sm:text-4xl">
                     {user.name
                       .charAt(0)
                       .toUpperCase()}
@@ -1227,15 +1270,19 @@ function ProfilePageContent() {
                 USER INFO
             ================================== */}
 
-            <div className="mt-4">
+            <div className="mt-5">
 
-              <h1 className="break-words text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-                {user.name}
-              </h1>
+              <div className="flex flex-col gap-1">
 
-              <p className="mt-1 break-all text-sm text-gray-400">
-                {user.email}
-              </p>
+                <h1 className="break-words text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+                  {user.name}
+                </h1>
+
+                <p className="break-all text-sm text-gray-400">
+                  {user.email}
+                </p>
+
+              </div>
 
               {user.bio ? (
                 <p className="mt-4 max-w-2xl whitespace-pre-wrap break-words text-sm leading-6 text-gray-600 sm:text-[15px]">
@@ -1248,7 +1295,7 @@ function ProfilePageContent() {
                     onClick={
                       handleOpenEditProfile
                     }
-                    className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
+                    className="mt-3 inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-600 transition hover:bg-blue-100"
                   >
                     + Add a bio
                   </button>
@@ -1262,8 +1309,13 @@ function ProfilePageContent() {
 
             {error && (
               <div className="mt-5 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-                <span>⚠️</span>
-                <p>{error}</p>
+                <span>
+                  ⚠️
+                </span>
+
+                <p>
+                  {error}
+                </p>
               </div>
             )}
 
@@ -1271,12 +1323,12 @@ function ProfilePageContent() {
                 STATS
             ================================== */}
 
-            <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+            <div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
 
-              {/* Posts */}
+              {/* POSTS */}
 
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
-                <p className="text-xl font-bold text-gray-900">
+              <div className="group rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-sm">
+                <p className="text-xl font-bold text-gray-900 transition group-hover:text-blue-600">
                   {Number(
                     user._count.posts,
                   ) || 0}
@@ -1287,10 +1339,10 @@ function ProfilePageContent() {
                 </p>
               </div>
 
-              {/* Followers */}
+              {/* FOLLOWERS */}
 
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
-                <p className="text-xl font-bold text-gray-900">
+              <div className="group rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-sm">
+                <p className="text-xl font-bold text-gray-900 transition group-hover:text-blue-600">
                   {Number(
                     user._count.followers,
                   ) || 0}
@@ -1301,10 +1353,10 @@ function ProfilePageContent() {
                 </p>
               </div>
 
-              {/* Following */}
+              {/* FOLLOWING */}
 
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
-                <p className="text-xl font-bold text-gray-900">
+              <div className="group rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-sm">
+                <p className="text-xl font-bold text-gray-900 transition group-hover:text-blue-600">
                   {Number(
                     user._count.following,
                   ) || 0}
@@ -1315,10 +1367,10 @@ function ProfilePageContent() {
                 </p>
               </div>
 
-              {/* Comments */}
+              {/* COMMENTS */}
 
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
-                <p className="text-xl font-bold text-gray-900">
+              <div className="group rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-sm">
+                <p className="text-xl font-bold text-gray-900 transition group-hover:text-blue-600">
                   {Number(
                     user._count.comments,
                   ) || 0}
@@ -1329,10 +1381,10 @@ function ProfilePageContent() {
                 </p>
               </div>
 
-              {/* Likes */}
+              {/* LIKES */}
 
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition hover:bg-white hover:shadow-sm">
-                <p className="text-xl font-bold text-gray-900">
+              <div className="group rounded-2xl border border-gray-100 bg-gray-50 px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-sm">
+                <p className="text-xl font-bold text-gray-900 transition group-hover:text-blue-600">
                   {Number(
                     user._count.likes,
                   ) || 0}
@@ -1353,37 +1405,43 @@ function ProfilePageContent() {
 
         <section className="mt-8">
 
+          {/* SECTION HEADER */}
+
           <div className="mb-5 flex items-end justify-between gap-3">
+
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
                 Activity
               </p>
 
-              <h2 className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+              <h2 className="mt-1 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
                 {user.name}'s Posts
               </h2>
             </div>
 
-            <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
+            <span className="shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 shadow-sm">
               {posts.length}{' '}
               {posts.length === 1
                 ? 'post'
                 : 'posts'}
             </span>
+
           </div>
 
-          {posts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-5 py-12 text-center shadow-sm">
+          {/* EMPTY STATE */}
 
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
+          {posts.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-gray-300 bg-white px-5 py-14 text-center shadow-sm">
+
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl">
                 📝
               </div>
 
-              <p className="mt-4 font-semibold text-gray-800">
+              <p className="mt-5 text-base font-bold text-gray-800">
                 No posts yet
               </p>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-gray-500">
                 {isOwnProfile
                   ? 'Share your first post with the developer community.'
                   : "This user hasn't shared any posts yet."}
@@ -1392,102 +1450,133 @@ function ProfilePageContent() {
               {isOwnProfile && (
                 <Link
                   href="/"
-                  className="mt-5 inline-flex rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  className="mt-6 inline-flex rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md"
                 >
                   Create a Post
                 </Link>
               )}
+
             </div>
           ) : (
             <div className="space-y-5">
 
-              {posts.map((post) => (
-                <article
-                  key={post.id}
-                  className="group overflow-hidden rounded-2xl border border-gray-200/70 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
-                >
+              {posts.map((post) => {
 
-                  {/* POST HEADER */}
+                const postAuthorImage =
+                  getImageUrl(
+                    post.author.profileImage,
+                  );
 
-                  <div className="flex items-center gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
-
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 font-bold text-blue-600">
-                      {post.author.profileImage ? (
-                        <img
-                          src={`http://localhost:3000${post.author.profileImage}`}
-                          alt={post.author.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        post.author.name
-                          .charAt(0)
-                          .toUpperCase()
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-gray-900">
-                        {post.author.name}
-                      </p>
-
-                      <p className="mt-0.5 text-xs text-gray-400">
-                        {new Date(
-                          post.createdAt,
-                        ).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* POST CONTENT */}
-
-                  <Link
-                    href={`/posts/${post.id}`}
-                    className="block px-4 pb-4 pt-4 sm:px-6 sm:pb-5"
+                return (
+                  <article
+                    key={post.id}
+                    className="group overflow-hidden rounded-3xl border border-gray-200/70 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-lg"
                   >
-                    <h3 className="break-words text-lg font-bold leading-snug text-gray-900 transition group-hover:text-blue-600 sm:text-xl">
-                      {post.title}
-                    </h3>
 
-                    <p className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600 sm:text-[15px] sm:leading-7">
-                      {post.content}
-                    </p>
+                    {/* POST HEADER */}
 
-                    {/* POST IMAGE */}
+                    <div className="flex items-center gap-3 px-4 pt-5 sm:px-6">
 
-                    {post.image && (
-                      <div className="mt-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
-                        <img
-                          src={`http://localhost:3000${post.image}`}
-                          alt={post.title}
-                          className="max-h-[500px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
-                        />
+                      <Link
+                        href={`/profile/${post.author.id}`}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 font-bold text-blue-600 ring-1 ring-gray-100"
+                      >
+                        {postAuthorImage ? (
+                          <img
+                            src={
+                              postAuthorImage
+                            }
+                            alt={
+                              post.author.name
+                            }
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          post.author.name
+                            .charAt(0)
+                            .toUpperCase()
+                        )}
+                      </Link>
+
+                      <div className="min-w-0">
+                        <Link
+                          href={`/profile/${post.author.id}`}
+                          className="block truncate text-sm font-bold text-gray-900 transition hover:text-blue-600"
+                        >
+                          {
+                            post.author.name
+                          }
+                        </Link>
+
+                        <p className="mt-0.5 text-xs text-gray-400">
+                          {new Date(
+                            post.createdAt,
+                          ).toLocaleDateString()}
+                        </p>
                       </div>
-                    )}
-                  </Link>
 
-                  {/* POST STATS */}
-
-                  <div className="mx-4 border-t border-gray-100 py-3 sm:mx-6">
-                    <div className="flex items-center gap-4 text-xs font-semibold text-gray-500 sm:gap-6 sm:text-sm">
-                      <span>
-                        ❤️{' '}
-                        {Number(
-                          post._count.likes,
-                        ) || 0}{' '}
-                        Likes
-                      </span>
-
-                      <span>
-                        💬{' '}
-                        {Number(
-                          post._count.comments,
-                        ) || 0}{' '}
-                        Comments
-                      </span>
                     </div>
-                  </div>
-                </article>
-              ))}
+
+                    {/* POST CONTENT */}
+
+                    <Link
+                      href={`/posts/${post.id}`}
+                      className="block px-4 pb-5 pt-4 sm:px-6 sm:pb-6"
+                    >
+
+                      <h3 className="break-words text-lg font-bold leading-snug text-gray-900 transition group-hover:text-blue-600 sm:text-xl">
+                        {post.title}
+                      </h3>
+
+                      <p className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600 sm:text-[15px] sm:leading-7">
+                        {post.content}
+                      </p>
+
+                      {/* POST IMAGE */}
+
+                      {post.image && (
+                        <div className="mt-4 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
+                          <img
+                            src={
+                              getImageUrl(
+                                post.image,
+                              ) || ''
+                            }
+                            alt={post.title}
+                            className="max-h-[520px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
+                          />
+                        </div>
+                      )}
+
+                    </Link>
+
+                    {/* POST STATS */}
+
+                    <div className="mx-4 border-t border-gray-100 py-3.5 sm:mx-6">
+                      <div className="flex items-center gap-4 text-xs font-semibold text-gray-500 sm:gap-6 sm:text-sm">
+
+                        <span className="transition hover:text-red-500">
+                          ❤️{' '}
+                          {Number(
+                            post._count.likes,
+                          ) || 0}{' '}
+                          Likes
+                        </span>
+
+                        <span className="transition hover:text-blue-500">
+                          💬{' '}
+                          {Number(
+                            post._count.comments,
+                          ) || 0}{' '}
+                          Comments
+                        </span>
+
+                      </div>
+                    </div>
+
+                  </article>
+                );
+              })}
 
             </div>
           )}
@@ -1506,42 +1595,46 @@ function ProfilePageContent() {
           }
         >
           <div
-            className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6"
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl"
             onMouseDown={(event) =>
               event.stopPropagation()
             }
           >
 
-            {/* MODAL HEADER */}
+            {/* MODAL TOP */}
 
-            <div className="flex items-start justify-between gap-4">
+            <div className="border-b border-gray-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-5 py-5 sm:px-6">
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-                  Profile settings
-                </p>
+              <div className="flex items-start justify-between gap-4">
 
-                <h2 className="mt-1 text-xl font-bold text-gray-900">
-                  Edit Profile
-                </h2>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+                    Profile settings
+                  </p>
 
-                <p className="mt-1 text-sm text-gray-500">
-                  Update your name and bio.
-                </p>
+                  <h2 className="mt-1 text-xl font-bold text-gray-900">
+                    Edit Profile
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Update your name and bio.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={
+                    handleCloseEditProfile
+                  }
+                  disabled={
+                    editProfileLoading
+                  }
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-400 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50"
+                >
+                  ✕
+                </button>
+
               </div>
-
-              <button
-                type="button"
-                onClick={
-                  handleCloseEditProfile
-                }
-                disabled={
-                  editProfileLoading
-                }
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
-              >
-                ✕
-              </button>
             </div>
 
             {/* FORM */}
@@ -1550,13 +1643,14 @@ function ProfilePageContent() {
               onSubmit={
                 handleUpdateProfile
               }
-              className="mt-6 space-y-5"
+              className="space-y-5 px-5 py-6 sm:px-6"
             >
 
               {/* NAME */}
 
               <div>
                 <div className="flex items-center justify-between gap-3">
+
                   <label
                     htmlFor="profile-name"
                     className="text-sm font-semibold text-gray-700"
@@ -1567,6 +1661,7 @@ function ProfilePageContent() {
                   <span className="text-xs text-gray-400">
                     {editName.length}/50
                   </span>
+
                 </div>
 
                 <input
@@ -1582,7 +1677,7 @@ function ProfilePageContent() {
                   disabled={
                     editProfileLoading
                   }
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-gray-100"
+                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-gray-100"
                   placeholder="Enter your name"
                 />
               </div>
@@ -1591,6 +1686,7 @@ function ProfilePageContent() {
 
               <div>
                 <div className="flex items-center justify-between gap-3">
+
                   <label
                     htmlFor="profile-bio"
                     className="text-sm font-semibold text-gray-700"
@@ -1601,6 +1697,7 @@ function ProfilePageContent() {
                   <span className="text-xs text-gray-400">
                     {editBio.length}/160
                   </span>
+
                 </div>
 
                 <textarea
@@ -1616,7 +1713,7 @@ function ProfilePageContent() {
                   disabled={
                     editProfileLoading
                   }
-                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-gray-100"
+                  className="mt-2 w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 disabled:bg-gray-100"
                   placeholder="Tell people a little about yourself..."
                 />
               </div>
@@ -1625,8 +1722,13 @@ function ProfilePageContent() {
 
               {error && (
                 <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-                  <span>⚠️</span>
-                  <p>{error}</p>
+                  <span>
+                    ⚠️
+                  </span>
+
+                  <p>
+                    {error}
+                  </p>
                 </div>
               )}
 
@@ -1657,6 +1759,7 @@ function ProfilePageContent() {
                   {editProfileLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+
                       Saving...
                     </span>
                   ) : (
