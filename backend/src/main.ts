@@ -53,7 +53,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3001',
-      'https://dev-connect-eight-ashy.vercel.app',
+      'https://dev-connect-mocha.vercel.app',
     ],
     credentials: true,
   });
