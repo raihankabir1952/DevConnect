@@ -1,19 +1,23 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-
+import Link from "next/link";
 import {
   Bell,
   BellOff,
   Heart,
   MessageCircle,
   Reply,
-} from 'lucide-react';
+} from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { io } from "socket.io-client";
+
+// ==========================================
+// TYPES
+// ==========================================
 
 interface User {
   id: number;
@@ -49,32 +53,55 @@ interface Notification {
   post?: NotificationPost | null;
 }
 
+// ==========================================
+// PROFILE IMAGE URL
+// ==========================================
+
+function getProfileImageUrl(
+  profileImage?: string | null,
+) {
+  if (!profileImage) {
+    return null;
+  }
+
+  if (
+    profileImage.startsWith("http://") ||
+    profileImage.startsWith("https://")
+  ) {
+    return profileImage;
+  }
+
+  return `http://localhost:3000${profileImage}`;
+}
+
+// ==========================================
+// NAVBAR
+// ==========================================
+
 export default function Navbar() {
-  // ==========================================
-  // SEARCH STATES
-  // ==========================================
-
-  const [search, setSearch] = useState('');
-
-  const [users, setUsers] =
-    useState<User[]>([]);
-
-  const [searching, setSearching] =
-    useState(false);
-
-  const [showResults, setShowResults] =
-    useState(false);
-
-  // ==========================================
-  // CURRENT USER
-  // ==========================================
+  // ========================================
+  // USER
+  // ========================================
 
   const [currentUser, setCurrentUser] =
     useState<LoggedInUser | null>(null);
 
-  // ==========================================
-  // NOTIFICATION STATES
-  // ==========================================
+  // ========================================
+  // SEARCH
+  // ========================================
+
+  const [search, setSearch] =
+    useState("");
+
+  const [searchResults, setSearchResults] =
+    useState<User[]>([]);
+
+  const [showSearchResults, setShowSearchResults] =
+    useState(false);
+
+  // ========================================
+  // NOTIFICATIONS
+  // ========================================
 
   const [notifications, setNotifications] =
     useState<Notification[]>([]);
@@ -82,189 +109,428 @@ export default function Navbar() {
   const [showNotifications, setShowNotifications] =
     useState(false);
 
-  const [notificationLoading, setNotificationLoading] =
+  // ========================================
+  // WEBSOCKET
+  // ========================================
+
+  const [socketConnected, setSocketConnected] =
     useState(false);
 
-  // ==========================================
+  // ========================================
   // MOBILE MENU
-  // ==========================================
+  // ========================================
 
-  const [showMobileMenu, setShowMobileMenu] =
+  const [mobileMenuOpen, setMobileMenuOpen] =
     useState(false);
 
-  // ==========================================
+  // ========================================
   // REFS
-  // ==========================================
-
-  const desktopSearchRef =
-    useRef<HTMLDivElement>(null);
-
-  const mobileSearchRef =
-    useRef<HTMLDivElement>(null);
+  // ========================================
 
   const notificationRef =
     useRef<HTMLDivElement>(null);
 
-  const mobileMenuRef =
+  const searchRef =
     useRef<HTMLDivElement>(null);
 
   // ==========================================
-  // PROFILE IMAGE URL
-  // ==========================================
-
-  function getProfileImageUrl(
-    profileImage?: string | null,
-  ) {
-    if (!profileImage) {
-      return null;
-    }
-
-    if (
-      profileImage.startsWith('http://') ||
-      profileImage.startsWith('https://')
-    ) {
-      return profileImage;
-    }
-
-    return `http://localhost:3000${profileImage}`;
-  }
-
-  // ==========================================
-  // LOAD LOGGED-IN USER
+  // LOAD CURRENT USER
   // ==========================================
 
   useEffect(() => {
-    async function loadCurrentUser() {
-      const storedUser =
-        localStorage.getItem('user');
+    const storedUser =
+      localStorage.getItem("user");
 
-      if (!storedUser) {
-        setCurrentUser(null);
-        return;
+    if (!storedUser) {
+      setCurrentUser(null);
+      return;
+    }
+
+    try {
+      const parsedUser =
+        JSON.parse(storedUser);
+
+      setCurrentUser(parsedUser);
+
+      // ======================================
+      // REFRESH USER DATA
+      // ======================================
+
+      fetch(
+        `http://localhost:3000/users/${parsedUser.id}`,
+      )
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(
+              "Failed to fetch user",
+            );
+          }
+
+          return response.json();
+        })
+        .then((user) => {
+          setCurrentUser(user);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(user),
+          );
+        })
+        .catch((error) => {
+          console.error(
+            "Failed to refresh user:",
+            error,
+          );
+        });
+    } catch (error) {
+      console.error(
+        "Invalid user data:",
+        error,
+      );
+
+      localStorage.removeItem("user");
+      setCurrentUser(null);
+    }
+  }, []);
+
+  // ==========================================
+  // WEBSOCKET CONNECTION
+  // ==========================================
+
+  useEffect(() => {
+    if (!currentUser) {
+      setSocketConnected(false);
+      return;
+    }
+
+    // ========================================
+    // CREATE SOCKET CONNECTION
+    // ========================================
+
+    const socket = io(
+      "http://localhost:3000",
+    );
+
+    // ========================================
+    // SOCKET CONNECTED
+    // ========================================
+
+    socket.on("connect", () => {
+      console.log(
+        "WebSocket connected:",
+        socket.id,
+      );
+
+      setSocketConnected(true);
+
+      // ======================================
+      // REGISTER CURRENT USER
+      // ======================================
+
+      socket.emit("register", {
+        userId: currentUser.id,
+      });
+
+      console.log(
+        "User registered:",
+        currentUser.id,
+      );
+    });
+
+    // ========================================
+    // REGISTRATION CONFIRMATION
+    // ========================================
+
+    socket.on(
+      "registered",
+      (data) => {
+        console.log(
+          "WebSocket registration:",
+          data,
+        );
+      },
+    );
+
+    // ========================================
+    // NEW REAL-TIME NOTIFICATION
+    // ========================================
+
+    socket.on(
+      "newNotification",
+      (notification: Notification) => {
+        console.log(
+          "New notification received:",
+          notification,
+        );
+
+        setNotifications(
+          (previousNotifications) => [
+            notification,
+            ...previousNotifications,
+          ],
+        );
+      },
+    );
+
+    // ========================================
+    // SOCKET DISCONNECTED
+    // ========================================
+
+    socket.on("disconnect", () => {
+      console.log(
+        "WebSocket disconnected",
+      );
+
+      setSocketConnected(false);
+    });
+
+    // ========================================
+    // CLEANUP
+    // ========================================
+
+    return () => {
+      socket.disconnect();
+
+      setSocketConnected(false);
+    };
+  }, [currentUser]);
+
+  // ==========================================
+  // FETCH NOTIFICATIONS
+  // INITIAL LOAD ONLY
+  // ==========================================
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    const fetchNotifications =
+      async () => {
+        try {
+          const response =
+            await fetch(
+              "http://localhost:3000/notifications",
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem(
+                    "accessToken",
+                  )}`,
+                },
+              },
+            );
+
+          if (!response.ok) {
+            return;
+          }
+
+          const data =
+            await response.json();
+
+          setNotifications(data);
+        } catch (error) {
+          console.error(
+            "Failed to fetch notifications:",
+            error,
+          );
+        }
+      };
+
+    // ========================================
+    // LOAD EXISTING NOTIFICATIONS
+    // ========================================
+
+    fetchNotifications();
+  }, [currentUser]);
+
+  // ==========================================
+  // CLOSE DROPDOWNS ON OUTSIDE CLICK
+  // ==========================================
+
+  useEffect(() => {
+    const handleClickOutside = (
+      event: MouseEvent,
+    ) => {
+      const target =
+        event.target as Node;
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(
+          target,
+        )
+      ) {
+        setShowNotifications(false);
       }
 
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(
+          target,
+        )
+      ) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside,
+      );
+    };
+  }, []);
+
+  // ==========================================
+  // SEARCH USERS
+  // ==========================================
+
+  useEffect(() => {
+    if (!search.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const timeout =
+      setTimeout(async () => {
+        try {
+          const response =
+            await fetch(
+              `http://localhost:3000/users/search?q=${encodeURIComponent(
+                search,
+              )}`,
+            );
+
+          if (!response.ok) {
+            return;
+          }
+
+          const data =
+            await response.json();
+
+          setSearchResults(data);
+          setShowSearchResults(true);
+        } catch (error) {
+          console.error(
+            "Search failed:",
+            error,
+          );
+        }
+      }, 400);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [search]);
+
+  // ==========================================
+  // MARK NOTIFICATION AS READ
+  // ==========================================
+
+  const markNotificationAsRead =
+    async (
+      notificationId: number,
+    ) => {
       try {
-        const parsedUser: LoggedInUser =
-          JSON.parse(storedUser);
+        const response =
+          await fetch(
+            `http://localhost:3000/notifications/${notificationId}/read`,
+            {
+              method: "PATCH",
 
-        setCurrentUser(parsedUser);
-
-        const response = await fetch(
-          `http://localhost:3000/users/${parsedUser.id}`,
-        );
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem(
+                  "accessToken",
+                )}`,
+              },
+            },
+          );
 
         if (!response.ok) {
           return;
         }
 
-        const latestUser =
-          await response.json();
-
-        const updatedUser: LoggedInUser = {
-          id: latestUser.id,
-          name: latestUser.name,
-          email: latestUser.email,
-          profileImage:
-            latestUser.profileImage || null,
-        };
-
-        setCurrentUser(updatedUser);
-
-        localStorage.setItem(
-          'user',
-          JSON.stringify(updatedUser),
+        setNotifications(
+          (previousNotifications) =>
+            previousNotifications.map(
+              (notification) =>
+                notification.id ===
+                notificationId
+                  ? {
+                      ...notification,
+                      isRead: true,
+                    }
+                  : notification,
+            ),
         );
       } catch (error) {
         console.error(
-          'Failed to load user:',
+          "Failed to mark notification as read:",
           error,
         );
-
-        setCurrentUser(null);
       }
-    }
-
-    loadCurrentUser();
-  }, []);
-
-  // ==========================================
-  // FETCH NOTIFICATIONS
-  // ==========================================
-
-  async function fetchNotifications() {
-    const token =
-      localStorage.getItem(
-        'accessToken',
-      );
-
-    if (!token) {
-      setNotifications([]);
-      return;
-    }
-
-    try {
-      setNotificationLoading(true);
-
-      const response = await fetch(
-        'http://localhost:3000/notifications',
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        const errorText =
-          await response.text();
-
-        console.error(
-          'Failed to fetch notifications:',
-          response.status,
-          errorText,
-        );
-
-        return;
-      }
-
-      const data =
-        await response.json();
-
-      if (Array.isArray(data)) {
-        setNotifications(data);
-      }
-    } catch (error) {
-      console.error(
-        'Notification fetch error:',
-        error,
-      );
-    } finally {
-      setNotificationLoading(false);
-    }
-  }
-
-  // ==========================================
-  // LOAD NOTIFICATIONS
-  // ==========================================
-
-  useEffect(() => {
-    if (!currentUser) {
-      setNotifications([]);
-      return;
-    }
-
-    fetchNotifications();
-
-    const interval =
-      setInterval(() => {
-        fetchNotifications();
-      }, 10000);
-
-    return () => {
-      clearInterval(interval);
     };
-  }, [currentUser]);
+
+  // ==========================================
+  // MARK ALL NOTIFICATIONS AS READ
+  // ==========================================
+
+  const markAllAsRead =
+    async () => {
+      try {
+        const response =
+          await fetch(
+            "http://localhost:3000/notifications/read-all",
+            {
+              method: "PATCH",
+
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem(
+                  "accessToken",
+                )}`,
+              },
+            },
+          );
+
+        if (!response.ok) {
+          return;
+        }
+
+        setNotifications(
+          (previousNotifications) =>
+            previousNotifications.map(
+              (notification) => ({
+                ...notification,
+                isRead: true,
+              }),
+            ),
+        );
+      } catch (error) {
+        console.error(
+          "Failed to mark all notifications as read:",
+          error,
+        );
+      }
+    };
+
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem(
+      "accessToken",
+    );
+
+    window.location.href = "/login";
+  };
 
   // ==========================================
   // UNREAD COUNT
@@ -277,501 +543,219 @@ export default function Navbar() {
     ).length;
 
   // ==========================================
-  // MARK SINGLE NOTIFICATION AS READ
+  // NOTIFICATION ICON
   // ==========================================
 
-  async function markNotificationAsRead(
-    notificationId: number,
-  ) {
-    const token =
-      localStorage.getItem(
-        'accessToken',
+  const getNotificationIcon = (
+    type: string,
+  ) => {
+    if (type === "LIKE") {
+      return (
+        <Heart
+          size={18}
+          className="text-red-500"
+          fill="currentColor"
+        />
       );
-
-    if (!token) {
-      return;
     }
 
-    try {
-      const response = await fetch(
-        `http://localhost:3000/notifications/${notificationId}/read`,
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        console.error(
-          'Failed to mark notification as read',
-        );
-
-        return;
-      }
-
-      setNotifications((previous) =>
-        previous.map(
-          (notification) =>
-            notification.id ===
-            notificationId
-              ? {
-                  ...notification,
-                  isRead: true,
-                }
-              : notification,
-        ),
-      );
-    } catch (error) {
-      console.error(
-        'Mark notification read error:',
-        error,
+    if (type === "COMMENT") {
+      return (
+        <MessageCircle
+          size={18}
+          className="text-blue-500"
+        />
       );
     }
-  }
 
-  // ==========================================
-  // MARK ALL NOTIFICATIONS AS READ
-  // ==========================================
-
-  async function markAllNotificationsAsRead() {
-    const token =
-      localStorage.getItem(
-        'accessToken',
-      );
-
-    if (!token || unreadCount === 0) {
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        'http://localhost:3000/notifications/read-all',
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        console.error(
-          'Failed to mark all notifications as read',
-        );
-
-        return;
-      }
-
-      setNotifications((previous) =>
-        previous.map(
-          (notification) => ({
-            ...notification,
-            isRead: true,
-          }),
-        ),
-      );
-    } catch (error) {
-      console.error(
-        'Mark all notifications read error:',
-        error,
+    if (type === "REPLY") {
+      return (
+        <Reply
+          size={18}
+          className="text-green-500"
+        />
       );
     }
-  }
 
-  // ==========================================
-  // SEARCH USERS
-  // ==========================================
-
-  useEffect(() => {
-    const searchUsers = async () => {
-      const trimmedSearch =
-        search.trim();
-
-      if (!trimmedSearch) {
-        setUsers([]);
-        setShowResults(false);
-        return;
-      }
-
-      try {
-        setSearching(true);
-
-        const response = await fetch(
-          `http://localhost:3000/users/search?name=${encodeURIComponent(
-            trimmedSearch,
-          )}`,
-        );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              'Failed to search users',
-          );
-        }
-
-        if (!Array.isArray(data)) {
-          throw new Error(
-            'Invalid response from server',
-          );
-        }
-
-        setUsers(data);
-
-        setShowResults(true);
-      } catch (error) {
-        console.error(
-          'User search error:',
-          error,
-        );
-
-        setUsers([]);
-
-        setShowResults(false);
-      } finally {
-        setSearching(false);
-      }
-    };
-
-    const timer = setTimeout(
-      searchUsers,
-      400,
+    return (
+      <Bell
+        size={18}
+        className="text-gray-500"
+      />
     );
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [search]);
+  };
 
   // ==========================================
-  // CLOSE DROPDOWNS
+  // RELATIVE TIME
   // ==========================================
 
-  useEffect(() => {
-    function handleClickOutside(
-      event: MouseEvent,
-    ) {
-      const target =
-        event.target as Node;
+  const getRelativeTime = (
+    date: string,
+  ) => {
+    const now =
+      new Date().getTime();
 
-      if (
-        desktopSearchRef.current &&
-        !desktopSearchRef.current.contains(
-          target,
-        )
-      ) {
-        setShowResults(false);
-      }
-
-      if (
-        mobileSearchRef.current &&
-        !mobileSearchRef.current.contains(
-          target,
-        )
-      ) {
-        setShowResults(false);
-      }
-
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(
-          target,
-        )
-      ) {
-        setShowNotifications(false);
-      }
-
-      if (
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(
-          target,
-        )
-      ) {
-        setShowMobileMenu(false);
-      }
-    }
-
-    document.addEventListener(
-      'mousedown',
-      handleClickOutside,
-    );
-
-    return () => {
-      document.removeEventListener(
-        'mousedown',
-        handleClickOutside,
-      );
-    };
-  }, []);
-
-  // ==========================================
-  // HANDLE USER PROFILE CLICK
-  // ==========================================
-
-  function handleUserClick() {
-    setSearch('');
-
-    setShowResults(false);
-
-    setShowMobileMenu(false);
-  }
-
-  // ==========================================
-  // HANDLE NOTIFICATION CLICK
-  // ==========================================
-
-  async function handleNotificationClick(
-    notification: Notification,
-  ) {
-    if (!notification.isRead) {
-      await markNotificationAsRead(
-        notification.id,
-      );
-    }
-
-    setShowNotifications(false);
-
-    if (notification.post) {
-      window.location.href =
-        `/?post=${notification.post.id}`;
-    }
-  }
-
-  // ==========================================
-  // LOGOUT
-  // ==========================================
-
-  function handleLogout() {
-    localStorage.removeItem(
-      'accessToken',
-    );
-
-    localStorage.removeItem('user');
-
-    setCurrentUser(null);
-
-    setNotifications([]);
-
-    setShowMobileMenu(false);
-
-    window.location.href = '/login';
-  }
-
-  // ==========================================
-  // FORMAT NOTIFICATION TIME
-  // ==========================================
-
-  function formatNotificationTime(
-    dateString: string,
-  ) {
-    const date =
-      new Date(dateString);
-
-    const now = new Date();
+    const created =
+      new Date(date).getTime();
 
     const difference =
-      now.getTime() -
-      date.getTime();
+      Math.floor(
+        (now - created) / 1000,
+      );
 
-    const seconds = Math.floor(
-      difference / 1000,
-    );
-
-    if (seconds < 60) {
-      return 'Just now';
+    if (difference < 60) {
+      return "Just now";
     }
 
-    const minutes = Math.floor(
-      seconds / 60,
-    );
-
-    if (minutes < 60) {
-      return `${minutes}m ago`;
+    if (difference < 3600) {
+      return `${Math.floor(
+        difference / 60,
+      )}m ago`;
     }
 
-    const hours = Math.floor(
-      minutes / 60,
-    );
-
-    if (hours < 24) {
-      return `${hours}h ago`;
+    if (difference < 86400) {
+      return `${Math.floor(
+        difference / 3600,
+      )}h ago`;
     }
 
-    const days = Math.floor(
-      hours / 24,
-    );
-
-    if (days < 7) {
-      return `${days}d ago`;
-    }
-
-    return date.toLocaleDateString();
-  }
+    return `${Math.floor(
+      difference / 86400,
+    )}d ago`;
+  };
 
   // ==========================================
-  // CLOSE MOBILE MENU
+  // RENDER
   // ==========================================
-
-  function closeMobileMenu() {
-    setShowMobileMenu(false);
-  }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
 
-      {/* ========================================== */}
-      {/* MAIN NAVBAR */}
-      {/* ========================================== */}
-
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
-
-        {/* ======================================== */}
+        {/* ================================== */}
         {/* LOGO */}
-        {/* ======================================== */}
+        {/* ================================== */}
 
         <Link
           href="/"
-          className="group flex shrink-0 items-center gap-2"
+          className="flex items-center gap-2"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white shadow-sm transition group-hover:scale-105 group-hover:bg-blue-700">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white">
             D
           </div>
 
-          <span className="text-lg font-bold tracking-tight text-gray-900 sm:text-xl">
-            Dev<span className="text-blue-600">
-              Connect
-            </span>
+          <span className="text-xl font-bold text-gray-900">
+            DevConnect
           </span>
         </Link>
 
-        {/* ======================================== */}
+        {/* ================================== */}
         {/* DESKTOP SEARCH */}
-        {/* ======================================== */}
+        {/* ================================== */}
 
         <div
-          ref={desktopSearchRef}
-          className="relative ml-2 hidden w-full max-w-md md:block"
+          ref={searchRef}
+          className="relative hidden w-full max-w-md md:block"
         >
-          <div className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-              🔍
-            </span>
+          <input
+            type="text"
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            placeholder="Search users..."
+            className="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+          />
 
-            <input
-              type="text"
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              onFocus={() => {
-                if (users.length > 0) {
-                  setShowResults(true);
-                }
-              }}
-              placeholder="Search developers..."
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/80 py-2.5 pl-11 pr-24 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
-            />
+          {showSearchResults && (
+            <div className="absolute left-0 right-0 top-12 rounded-lg border border-gray-200 bg-white shadow-lg">
 
-            {searching && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-500">
-                Searching...
-              </span>
-            )}
-          </div>
-
-          {/* Search Results */}
-
-          {showResults && (
-            <div className="absolute left-0 right-0 top-14 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-              {users.length > 0 ? (
-                <div className="py-2">
-                  {users.map((user) => {
-                    const imageUrl =
-                      getProfileImageUrl(
-                        user.profileImage,
-                      );
-
-                    return (
-                      <Link
-                        key={user.id}
-                        href={`/profile/${user.id}`}
-                        onClick={
-                          handleUserClick
-                        }
-                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-blue-50/60"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={user.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            user.name
-                              .charAt(0)
-                              .toUpperCase()
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold text-gray-900">
-                            {user.name}
-                          </p>
-
-                          <p className="text-xs text-gray-500">
-                            View profile
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
+              {searchResults.length ===
+              0 ? (
+                <div className="p-4 text-sm text-gray-500">
+                  No users found
                 </div>
               ) : (
-                !searching && (
-                  <div className="px-4 py-7 text-center">
-                    <div className="text-2xl">
-                      🔍
-                    </div>
+                searchResults.map(
+                  (user) => (
+                    <Link
+                      key={user.id}
+                      href={`/profile/${user.id}`}
+                      onClick={() => {
+                        setShowSearchResults(
+                          false,
+                        );
 
-                    <p className="mt-2 text-sm font-semibold text-gray-700">
-                      No users found
-                    </p>
+                        setSearch("");
+                      }}
+                      className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 hover:bg-gray-50"
+                    >
+                      {getProfileImageUrl(
+                        user.profileImage,
+                      ) ? (
+                        <img
+                          src={
+                            getProfileImageUrl(
+                              user.profileImage,
+                            )!
+                          }
+                          alt={user.name}
+                          className="h-9 w-9 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-600">
+                          {user.name
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+                      )}
 
-                    <p className="mt-1 text-xs text-gray-400">
-                      Try another name.
-                    </p>
-                  </div>
+                      <span className="font-medium text-gray-800">
+                        {user.name}
+                      </span>
+                    </Link>
+                  ),
                 )
               )}
             </div>
           )}
         </div>
 
-        {/* ======================================== */}
+        {/* ================================== */}
         {/* RIGHT SIDE */}
-        {/* ======================================== */}
+        {/* ================================== */}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-3">
 
-          {/* Desktop Home */}
+          {/* ================================= */}
+          {/* WEBSOCKET STATUS */}
+          {/* ================================= */}
 
-          <Link
-            href="/"
-            className="hidden rounded-xl px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 lg:block"
-          >
-            Home
-          </Link>
+          {currentUser && (
+            <div
+              className={`hidden items-center gap-1 text-xs sm:flex ${
+                socketConnected
+                  ? "text-green-600"
+                  : "text-gray-400"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  socketConnected
+                    ? "bg-green-500"
+                    : "bg-gray-400"
+                }`}
+              />
 
-          {/* ====================================== */}
-          {/* NOTIFICATION */}
-          {/* ====================================== */}
+              {socketConnected
+                ? "Online"
+                : "Offline"}
+            </div>
+          )}
+
+          {/* ================================= */}
+          {/* NOTIFICATIONS */}
+          {/* ================================= */}
 
           {currentUser && (
             <div
@@ -779,546 +763,265 @@ export default function Navbar() {
               className="relative"
             >
               <button
-                type="button"
                 onClick={() =>
                   setShowNotifications(
                     (previous) =>
                       !previous,
                   )
                 }
-                className={`relative flex h-10 w-10 items-center justify-center rounded-xl border transition ${
-                  showNotifications
-                    ? 'border-blue-200 bg-blue-50 text-blue-600'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
-                }`}
-                aria-label="Notifications"
+                className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100"
               >
-                <Bell className="h-5 w-5" />
+                <Bell size={21} />
 
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[9px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                     {unreadCount > 99
-                      ? '99+'
+                      ? "99+"
                       : unreadCount}
                   </span>
                 )}
               </button>
 
-              {/* ==================================== */}
-              {/* NOTIFICATION DROPDOWN */}
-              {/* ==================================== */}
-
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-[390px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-300/40">
+                <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
 
-                  {/* Header */}
+                  {/* HEADER */}
 
-                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900">
-                        Notifications
-                      </h3>
-
-                      {unreadCount > 0 ? (
-                        <p className="mt-0.5 text-xs text-gray-500">
-                          {unreadCount} unread notification
-                          {unreadCount !== 1
-                            ? 's'
-                            : ''}
-                        </p>
-                      ) : (
-                        <p className="mt-0.5 text-xs text-gray-400">
-                          You're all caught up
-                        </p>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+                    <h3 className="font-semibold text-gray-900">
+                      Notifications
+                    </h3>
 
                     {unreadCount > 0 && (
                       <button
-                        type="button"
                         onClick={
-                          markAllNotificationsAsRead
+                          markAllAsRead
                         }
-                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
+                        className="text-xs font-medium text-blue-600 hover:underline"
                       >
                         Mark all read
                       </button>
                     )}
                   </div>
 
-                  {/* Notification List */}
+                  {/* NOTIFICATIONS */}
 
-                  <div className="max-h-[430px] overflow-y-auto">
-                    {notificationLoading &&
-                    notifications.length === 0 ? (
-                      <div className="space-y-4 px-4 py-5">
-                        {[1, 2, 3].map(
-                          (item) => (
-                            <div
-                              key={item}
-                              className="flex animate-pulse gap-3"
-                            >
-                              <div className="h-11 w-11 shrink-0 rounded-full bg-gray-200" />
+                  <div className="max-h-96 overflow-y-auto">
 
-                              <div className="min-w-0 flex-1 space-y-2">
-                                <div className="h-3.5 w-3/4 rounded bg-gray-200" />
+                    {notifications.length ===
+                    0 ? (
+                      <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
+                        <BellOff
+                          size={32}
+                          className="mb-2 text-gray-300"
+                        />
 
-                                <div className="h-3 w-1/2 rounded bg-gray-100" />
-
-                                <div className="h-2.5 w-1/4 rounded bg-gray-100" />
-                              </div>
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    ) : notifications.length ===
-                      0 ? (
-                      <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-                        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-                          <BellOff className="h-6 w-6 text-gray-400" />
-                        </div>
-
-                        <p className="text-sm font-semibold text-gray-800">
-                          No notifications yet
-                        </p>
-
-                        <p className="mt-1 max-w-[240px] text-xs leading-5 text-gray-400">
-                          When someone likes,
-                          comments, or replies to
-                          your posts, you'll see it
-                          here.
+                        <p className="text-sm text-gray-500">
+                          No notifications
                         </p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-gray-100">
-                        {notifications.map(
-                          (notification) => {
-                            const actorImage =
-                              getProfileImageUrl(
-                                notification
-                                  .actor
-                                  ?.profileImage,
-                              );
+                      notifications.map(
+                        (
+                          notification,
+                        ) => (
+                          <button
+                            key={
+                              notification.id
+                            }
+                            onClick={() =>
+                              markNotificationAsRead(
+                                notification.id,
+                              )
+                            }
+                            className={`flex w-full gap-3 border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50 ${
+                              !notification.isRead
+                                ? "bg-blue-50"
+                                : "bg-white"
+                            }`}
+                          >
 
-                            const actorName =
-                              notification.actor
-                                ?.name ||
-                              'Someone';
+                            {/* ACTOR IMAGE */}
 
-                            return (
-                              <button
-                                key={
-                                  notification.id
+                            {getProfileImageUrl(
+                              notification
+                                .actor
+                                ?.profileImage,
+                            ) ? (
+                              <img
+                                src={
+                                  getProfileImageUrl(
+                                    notification
+                                      .actor
+                                      ?.profileImage,
+                                  )!
                                 }
-                                type="button"
-                                onClick={() =>
-                                  handleNotificationClick(
-                                    notification,
-                                  )
+                                alt={
+                                  notification
+                                    .actor
+                                    ?.name ||
+                                  "User"
                                 }
-                                className={`group flex w-full gap-3 px-4 py-3.5 text-left transition ${
-                                  notification.isRead
-                                    ? 'bg-white hover:bg-gray-50'
-                                    : 'bg-blue-50/60 hover:bg-blue-50'
-                                }`}
-                              >
-                                {/* Actor Avatar */}
+                                className="h-9 w-9 flex-shrink-0 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">
+                                {getNotificationIcon(
+                                  notification.type,
+                                )}
+                              </div>
+                            )}
 
-                                <div className="relative shrink-0">
-                                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold text-blue-600 ring-2 ring-white">
-                                    {actorImage ? (
-                                      <img
-                                        src={
-                                          actorImage
-                                        }
-                                        alt={
-                                          actorName
-                                        }
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      actorName
-                                        .charAt(
-                                          0,
-                                        )
-                                        .toUpperCase()
-                                    )}
-                                  </div>
+                            {/* CONTENT */}
 
-                                  {/* Notification Type Icon */}
+                            <div className="min-w-0 flex-1">
 
-                                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-100">
-                                    {notification.type
-                                      .toUpperCase()
-                                      .includes(
-                                        'LIKE',
-                                      ) ? (
-                                      <Heart className="h-3 w-3 fill-red-500 text-red-500" />
-                                    ) : notification.type
-                                        .toUpperCase()
-                                        .includes(
-                                          'REPLY',
-                                        ) ? (
-                                      <Reply className="h-3 w-3 text-purple-500" />
-                                    ) : notification.type
-                                        .toUpperCase()
-                                        .includes(
-                                          'COMMENT',
-                                        ) ? (
-                                      <MessageCircle className="h-3 w-3 text-blue-500" />
-                                    ) : (
-                                      <Bell className="h-3 w-3 text-gray-500" />
-                                    )}
-                                  </div>
-                                </div>
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-sm text-gray-800">
+                                  {notification.message}
+                                </p>
 
-                                {/* Notification Content */}
+                                {!notification.isRead && (
+                                  <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-blue-600" />
+                                )}
+                              </div>
 
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p
-                                      className={`text-sm leading-5 ${
-                                        notification.isRead
-                                          ? 'text-gray-700'
-                                          : 'font-medium text-gray-900'
-                                      }`}
-                                    >
-                                      <span className="font-bold text-gray-900">
-                                        {
-                                          actorName
-                                        }
-                                      </span>{' '}
-                                      {
-                                        notification.message
-                                      }
-                                    </p>
+                              {notification.post && (
+                                <p className="mt-1 truncate text-xs text-gray-500">
+                                  {notification
+                                    .post
+                                    .title}
+                                </p>
+                              )}
 
-                                    {/* Unread Dot */}
-
-                                    {!notification.isRead && (
-                                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
-                                    )}
-                                  </div>
-
-                                  {/* Related Post */}
-
-                                  {notification.post
-                                    ?.title && (
-                                    <div className="mt-1.5 flex items-center gap-1.5">
-                                      <span className="shrink-0 text-[10px] text-gray-400">
-                                        Post
-                                      </span>
-
-                                      <p className="min-w-0 truncate rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600">
-                                        {
-                                          notification
-                                            .post
-                                            .title
-                                        }
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Time */}
-
-                                  <p className="mt-1 text-[11px] text-gray-400">
-                                    {formatNotificationTime(
-                                      notification.createdAt,
-                                    )}
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          },
-                        )}
-                      </div>
+                              <p className="mt-1 text-[11px] text-gray-400">
+                                {getRelativeTime(
+                                  notification.createdAt,
+                                )}
+                              </p>
+                            </div>
+                          </button>
+                        ),
+                      )
                     )}
                   </div>
-
-                  {/* Footer */}
-
-                  {notifications.length > 0 && (
-                    <div className="border-t border-gray-100 bg-gray-50/70 px-4 py-2.5 text-center">
-                      <p className="text-[11px] text-gray-400">
-                        Click a notification to view
-                        the related post
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* ====================================== */}
-          {/* DESKTOP USER */}
-          {/* ====================================== */}
+          {/* ================================= */}
+          {/* PROFILE */}
+          {/* ================================= */}
 
-          {currentUser ? (
-            <>
-              <Link
-                href={`/profile/${currentUser.id}`}
-                className="hidden items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:flex"
-              >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-bold text-blue-600">
-                  {getProfileImageUrl(
-                    currentUser.profileImage,
-                  ) ? (
-                    <img
-                      src={getProfileImageUrl(
-                        currentUser.profileImage,
-                      )!}
-                      alt={currentUser.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    currentUser.name
-                      .charAt(0)
-                      .toUpperCase()
-                  )}
+          {currentUser && (
+            <Link
+              href={`/profile/${currentUser.id}`}
+              className="hidden items-center gap-2 md:flex"
+            >
+              {getProfileImageUrl(
+                currentUser.profileImage,
+              ) ? (
+                <img
+                  src={
+                    getProfileImageUrl(
+                      currentUser.profileImage,
+                    )!
+                  }
+                  alt={currentUser.name}
+                  className="h-9 w-9 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-600">
+                  {currentUser.name
+                    .charAt(0)
+                    .toUpperCase()}
                 </div>
+              )}
 
-                <span className="max-w-[100px] truncate">
-                  {currentUser.name}
-                </span>
-              </Link>
-
-              <button
-                onClick={handleLogout}
-                className="hidden rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:block"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="hidden rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:block"
-              >
-                Login
-              </Link>
-
-              <Link
-                href="/register"
-                className="hidden rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 sm:block"
-              >
-                Register
-              </Link>
-            </>
+              <span className="font-medium text-gray-800">
+                {currentUser.name}
+              </span>
+            </Link>
           )}
 
-          {/* ====================================== */}
-          {/* MOBILE MENU BUTTON */}
-          {/* ====================================== */}
+          {/* ================================= */}
+          {/* LOGOUT */}
+          {/* ================================= */}
+
+          {currentUser && (
+            <button
+              onClick={handleLogout}
+              className="hidden rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 md:block"
+            >
+              Logout
+            </button>
+          )}
+
+          {/* ================================= */}
+          {/* MOBILE MENU */}
+          {/* ================================= */}
 
           <button
-            type="button"
             onClick={() =>
-              setShowMobileMenu(
+              setMobileMenuOpen(
                 (previous) =>
                   !previous,
               )
             }
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-lg text-gray-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 sm:hidden"
-            aria-label="Open menu"
+            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 md:hidden"
           >
-            {showMobileMenu
-              ? '✕'
-              : '☰'}
+            ☰
           </button>
         </div>
       </div>
 
-      {/* ========================================== */}
+      {/* ==================================== */}
       {/* MOBILE MENU */}
-      {/* ========================================== */}
+      {/* ==================================== */}
 
-      {showMobileMenu && (
-        <div
-          ref={mobileMenuRef}
-          className="border-t border-gray-100 bg-white px-4 pb-4 pt-3 shadow-sm sm:hidden"
-        >
-          {/* Mobile Navigation */}
+      {mobileMenuOpen && (
+        <div className="border-t border-gray-200 bg-white px-4 py-4 md:hidden">
 
-          <div className="space-y-1">
+          {/* MOBILE SEARCH */}
 
-            <Link
-              href="/"
-              onClick={closeMobileMenu}
-              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
-            >
-              <span>🏠</span>
-              Home
-            </Link>
-
-            {currentUser ? (
-              <>
-                <Link
-                  href={`/profile/${currentUser.id}`}
-                  onClick={closeMobileMenu}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-xs font-bold text-blue-600">
-                    {getProfileImageUrl(
-                      currentUser.profileImage,
-                    ) ? (
-                      <img
-                        src={getProfileImageUrl(
-                          currentUser.profileImage,
-                        )!}
-                        alt={currentUser.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      currentUser.name
-                        .charAt(0)
-                        .toUpperCase()
-                    )}
-                  </div>
-
-                  <span className="truncate">
-                    {currentUser.name}
-                  </span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                >
-                  <span>↪</span>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  onClick={closeMobileMenu}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <span>→</span>
-                  Login
-                </Link>
-
-                <Link
-                  href="/register"
-                  onClick={closeMobileMenu}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <span>＋</span>
-                  Register
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================== */}
-      {/* MOBILE SEARCH */}
-      {/* ========================================== */}
-
-      <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-3 md:hidden">
-        <div
-          ref={mobileSearchRef}
-          className="relative"
-        >
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
-          </span>
-
-          <input
-            type="text"
-            value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
-            onFocus={() => {
-              if (users.length > 0) {
-                setShowResults(true);
-              }
-            }}
-            placeholder="Search developers..."
-            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
-          />
-
-          {searching && (
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-blue-500">
-              Searching...
-            </span>
-          )}
-
-          {/* Mobile Search Results */}
-
-          {showResults && (
-            <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-              {users.length > 0 ? (
-                <div className="py-2">
-                  {users.map((user) => {
-                    const imageUrl =
-                      getProfileImageUrl(
-                        user.profileImage,
-                      );
-
-                    return (
-                      <Link
-                        key={user.id}
-                        href={`/profile/${user.id}`}
-                        onClick={
-                          handleUserClick
-                        }
-                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-blue-50"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 font-bold text-blue-600">
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={user.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            user.name
-                              .charAt(0)
-                              .toUpperCase()
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold text-gray-900">
-                            {user.name}
-                          </p>
-
-                          <p className="text-xs text-gray-500">
-                            View profile
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : (
-                !searching && (
-                  <div className="p-6 text-center">
-                    <div className="text-2xl">
-                      🔍
-                    </div>
-
-                    <p className="mt-2 text-sm font-semibold text-gray-700">
-                      No users found
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-400">
-                      Try another name.
-                    </p>
-                  </div>
+          <div className="mb-4">
+            <input
+              type="text"
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value,
                 )
-              )}
+              }
+              placeholder="Search users..."
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {currentUser && (
+            <div className="flex flex-col gap-2">
+
+              <Link
+                href={`/profile/${currentUser.id}`}
+                onClick={() =>
+                  setMobileMenuOpen(false)
+                }
+                className="rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100"
+              >
+                Profile
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="rounded-lg px-3 py-2 text-left text-red-600 hover:bg-red-50"
+              >
+                Logout
+              </button>
             </div>
           )}
         </div>
-      </div>
+      )}
     </nav>
   );
 }
