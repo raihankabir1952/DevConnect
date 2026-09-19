@@ -47,6 +47,7 @@ The goal of the project is to create a place where developers can:
 - Receive real-time-style notifications for interactions
 - Verify their email address
 - Reset forgotten passwords securely
+- The app also supports real-time notifications using WebSockets (Socket.IO).
 
 The project was built to practice and demonstrate real-world **frontend + backend development**, authentication, relational database design, REST API development, file uploads, notifications, and responsive UI development.
 
@@ -193,6 +194,7 @@ The notification system supports:
 - Mark all notifications as read
 - Actor profile images
 - Related post information
+- ⚡ Real-time notifications using WebSockets (Socket.IO)
 
 ---
 
@@ -493,9 +495,6 @@ Designed PostgreSQL relationships for users, posts, comments, likes, followers, 
 ### 🔮 Future Improvements
 Possible future improvements include:
 
-- ☁️ Cloud image storage
-- ⚡ Real-time notifications using WebSockets
-- 🔍 Advanced search and filtering
 - 🏷️ Developer skill tags
 - 💼 Developer portfolio section
 - 💬 Real-time chat
@@ -528,6 +527,7 @@ While building DevConnect, I gained practical experience with:
 - Frontend-backend integration
 - Error handling
 - Git & GitHub workflow
+- Implemented real-time notifications using WebSockets (Socket.IO) in a NestJS + Next.js application.
 
 ---
 
