@@ -10,7 +10,10 @@ import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:3001',
+    origin: [
+      'http://localhost:3001',
+      'https://dev-connect-mocha.vercel.app',
+    ],
     credentials: true,
   },
 })
