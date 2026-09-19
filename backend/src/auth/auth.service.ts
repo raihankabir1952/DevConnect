@@ -27,9 +27,13 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
+  // ==========================================
   // REGISTER
+  // ==========================================
+
   async register(registerDto: RegisterDto) {
-    const { name, email, password } = registerDto;
+    const { name, email, password } =
+      registerDto;
 
     const existingUser =
       await this.prisma.user.findUnique({
@@ -91,7 +95,10 @@ export class AuthService {
     };
   }
 
+  // ==========================================
   // VERIFY EMAIL
+  // ==========================================
+
   async verifyEmail(token: string) {
     const tokenHash =
       createHash('sha256')
@@ -139,7 +146,10 @@ export class AuthService {
     };
   }
 
+  // ==========================================
   // FORGOT PASSWORD
+  // ==========================================
+
   async forgotPassword(email: string) {
     const user =
       await this.prisma.user.findUnique({
@@ -191,7 +201,10 @@ export class AuthService {
     };
   }
 
+  // ==========================================
   // RESET PASSWORD
+  // ==========================================
+
   async resetPassword(
     token: string,
     password: string,
@@ -248,7 +261,10 @@ export class AuthService {
     };
   }
 
+  // ==========================================
   // LOGIN
+  // ==========================================
+
   async login(loginDto: LoginDto) {
     const { email, password } =
       loginDto;
@@ -257,6 +273,15 @@ export class AuthService {
       await this.prisma.user.findUnique({
         where: { email },
       });
+
+    // TEMPORARY LOGIN DEBUG
+    // Never log password or password hash.
+    console.log('LOGIN DEBUG:', {
+      email,
+      userFound: !!user,
+      emailVerified:
+        user?.emailVerified ?? null,
+    });
 
     if (!user) {
       throw new UnauthorizedException(
@@ -269,6 +294,12 @@ export class AuthService {
         password,
         user.password,
       );
+
+    // TEMPORARY LOGIN DEBUG
+    // Never log password or password hash.
+    console.log('PASSWORD DEBUG:', {
+      passwordValid: isPasswordValid,
+    });
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(
