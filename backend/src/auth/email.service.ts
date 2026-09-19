@@ -5,8 +5,10 @@ import * as nodemailer from 'nodemailer';
 export class EmailService {
   private transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT),
-    secure: process.env.MAIL_SECURE === 'true',
+
+    // Gmail SMTP SSL
+    port: 465,
+    secure: true,
 
     auth: {
       user: process.env.MAIL_USER,
@@ -23,7 +25,8 @@ export class EmailService {
     name: string,
     token: string,
   ) {
-    const frontendUrl = process.env.FRONTEND_URL;
+    const frontendUrl =
+      process.env.FRONTEND_URL;
 
     const verificationUrl =
       `${frontendUrl}/verify-email?token=${token}`;
@@ -52,8 +55,6 @@ export class EmailService {
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
           ">
 
-            <!-- HEADER -->
-
             <div style="
               background-color: #111827;
               padding: 30px;
@@ -77,8 +78,6 @@ export class EmailService {
               </p>
 
             </div>
-
-            <!-- CONTENT -->
 
             <div style="
               padding: 40px 35px;
@@ -112,8 +111,6 @@ export class EmailService {
                 To get started, please verify your
                 email address by clicking the button below.
               </p>
-
-              <!-- BUTTON -->
 
               <div style="
                 text-align: center;
@@ -160,8 +157,6 @@ export class EmailService {
 
             </div>
 
-            <!-- FOOTER -->
-
             <div style="
               padding: 20px 30px;
               background-color: #f9fafb;
@@ -195,7 +190,8 @@ export class EmailService {
     name: string,
     token: string,
   ) {
-    const frontendUrl = process.env.FRONTEND_URL;
+    const frontendUrl =
+      process.env.FRONTEND_URL;
 
     const resetUrl =
       `${frontendUrl}/reset-password?token=${token}`;
@@ -204,7 +200,8 @@ export class EmailService {
       from: process.env.MAIL_FROM,
       to,
 
-      subject: 'Reset your DevConnect password',
+      subject:
+        'Reset your DevConnect password',
 
       html: `
         <div style="

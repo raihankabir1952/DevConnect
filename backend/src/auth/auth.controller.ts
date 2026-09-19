@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
+
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -17,6 +18,7 @@ export class AuthController {
   ) {}
 
   // LOGIN
+
   @Post('login')
   login(
     @Body() loginDto: LoginDto,
@@ -27,6 +29,7 @@ export class AuthController {
   }
 
   // REGISTER
+
   @Post('register')
   register(
     @Body() registerDto: RegisterDto,
@@ -37,6 +40,7 @@ export class AuthController {
   }
 
   // VERIFY EMAIL
+
   @Get('verify-email')
   verifyEmail(
     @Query('token') token: string,
@@ -47,16 +51,23 @@ export class AuthController {
   }
 
   // FORGOT PASSWORD
+
   @Post('forgot-password')
   forgotPassword(
     @Body('email') email: string,
   ) {
+    console.log(
+      'FORGOT PASSWORD EMAIL:',
+      email,
+    );
+
     return this.authService.forgotPassword(
       email,
     );
   }
 
   // RESET PASSWORD
+
   @Post('reset-password')
   resetPassword(
     @Body('token') token: string,
