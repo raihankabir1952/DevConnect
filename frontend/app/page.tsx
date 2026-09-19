@@ -6,18 +6,19 @@ import Navbar from '@/components/Navbar';
 import CreatePost from '@/components/CreatePost';
 import PostCard from '@/components/PostCard';
 import ProtectedRoute from '@/components/ProtectedRoute';
-// import WebSocketTest from '@/components/WebSocketTest';
 
 interface Post {
   id: number;
   title: string;
   content: string;
+  image : string | null;
   createdAt: string;
   updatedAt: string;
   authorId: number;
   author: {
     id: number;
     name: string;
+    profileImage: string | null;
   };
   _count: {
     comments: number;
@@ -47,8 +48,12 @@ export default function Home() {
       setLoading(true);
       setError('');
 
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://localhost:3000';
+
       const response = await fetch(
-        'http://localhost:3000/posts',
+        `${API_URL}/posts`,
       );
 
       if (!response.ok) {
@@ -80,7 +85,6 @@ export default function Home() {
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        
 
         <main className="mx-auto max-w-2xl px-4 py-8">
           <div className="mb-8">
@@ -138,8 +142,7 @@ export default function Home() {
                       (currentPosts) =>
                         currentPosts.filter(
                           (currentPost) =>
-                            currentPost.id !==
-                            postId,
+                            currentPost.id !== postId,
                         ),
                     );
                   }}

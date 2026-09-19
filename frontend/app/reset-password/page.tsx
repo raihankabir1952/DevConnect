@@ -2,6 +2,7 @@
 
 import {
   FormEvent,
+  Suspense,
   useState,
 } from 'react';
 
@@ -12,12 +13,10 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:3000';
 
-export default function ResetPasswordPage() {
-  const searchParams =
-    useSearchParams();
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
 
-  const token =
-    searchParams.get('token');
+  const token = searchParams.get('token');
 
   const [password, setPassword] =
     useState('');
@@ -136,23 +135,14 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4 py-8">
-
-      {/* ======================================
-          DEVCONNECT LOGO
-      ====================================== */}
-
       <div className="flex justify-center">
         <Link
           href="/"
           className="group inline-flex items-center gap-2"
         >
-          {/* J Logo */}
-
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xl font-black text-white shadow-md transition duration-200 group-hover:scale-105 group-hover:shadow-lg">
             J
           </div>
-
-          {/* Brand */}
 
           <span className="text-xl font-bold tracking-tight text-gray-900">
             DevConnect
@@ -160,20 +150,10 @@ export default function ResetPasswordPage() {
         </Link>
       </div>
 
-      {/* ======================================
-          RESET PASSWORD CARD
-      ====================================== */}
-
       <div className="flex min-h-[calc(100vh-100px)] items-center justify-center">
-
         <div className="w-full max-w-md">
-
           <div className="overflow-hidden rounded-3xl border border-gray-200/80 bg-white p-6 shadow-xl shadow-gray-200/50 sm:p-8">
-
-            {/* Header */}
-
             <div className="mb-7 text-center">
-
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl">
                 🔑
               </div>
@@ -186,10 +166,7 @@ export default function ResetPasswordPage() {
                 Enter a new password for
                 your DevConnect account.
               </p>
-
             </div>
-
-            {/* Error */}
 
             {error && (
               <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -201,19 +178,14 @@ export default function ResetPasswordPage() {
               </div>
             )}
 
-            {/* Success */}
-
             {message && (
               <div className="mb-5 rounded-xl border border-green-100 bg-green-50 px-4 py-4 text-sm text-green-700">
-
                 <div className="flex items-start gap-3">
-
                   <span className="mt-0.5">
                     ✓
                   </span>
 
                   <p>{message}</p>
-
                 </div>
 
                 <Link
@@ -222,20 +194,14 @@ export default function ResetPasswordPage() {
                 >
                   Continue to Login
                 </Link>
-
               </div>
             )}
-
-            {/* Reset Form */}
 
             {!message && (
               <form
                 onSubmit={handleSubmit}
                 className="space-y-5"
               >
-
-                {/* New Password */}
-
                 <div>
                   <label
                     htmlFor="password"
@@ -264,8 +230,6 @@ export default function ResetPasswordPage() {
                   </p>
                 </div>
 
-                {/* Confirm Password */}
-
                 <div>
                   <label
                     htmlFor="confirmPassword"
@@ -292,8 +256,6 @@ export default function ResetPasswordPage() {
                   />
                 </div>
 
-                {/* Reset Button */}
-
                 <button
                   type="submit"
                   disabled={loading}
@@ -309,11 +271,8 @@ export default function ResetPasswordPage() {
                     'Reset Password'
                   )}
                 </button>
-
               </form>
             )}
-
-            {/* Back to Login */}
 
             {!message && (
               <div className="mt-7 border-t border-gray-100 pt-5 text-center">
@@ -326,17 +285,29 @@ export default function ResetPasswordPage() {
                 </Link>
               </div>
             )}
-
           </div>
-
-          {/* Footer */}
 
           <p className="mt-5 text-center text-xs text-gray-400">
             Connect • Share • Grow
           </p>
-
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-gray-50">
+          <p className="text-gray-500">
+            Loading...
+          </p>
+        </main>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

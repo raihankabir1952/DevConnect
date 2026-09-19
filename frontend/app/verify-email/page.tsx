@@ -1,6 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import {
+  Suspense,
+  useEffect,
+  useState,
+} from 'react';
+
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -8,9 +13,8 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:3000';
 
-export default function VerifyEmailPage() {
-  const searchParams =
-    useSearchParams();
+function VerifyEmailContent() {
+  const searchParams = useSearchParams();
 
   const token =
     searchParams.get('token');
@@ -72,23 +76,14 @@ export default function VerifyEmailPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4 py-8">
-
-      {/* ======================================
-          DEVCONNECT LOGO
-      ====================================== */}
-
       <div className="flex justify-center">
         <Link
           href="/"
           className="group inline-flex items-center gap-2"
         >
-          {/* J Logo */}
-
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xl font-black text-white shadow-md transition duration-200 group-hover:scale-105 group-hover:shadow-lg">
             J
           </div>
-
-          {/* Brand */}
 
           <span className="text-xl font-bold tracking-tight text-gray-900">
             DevConnect
@@ -96,20 +91,9 @@ export default function VerifyEmailPage() {
         </Link>
       </div>
 
-      {/* ======================================
-          VERIFICATION CARD
-      ====================================== */}
-
       <div className="flex min-h-[calc(100vh-100px)] items-center justify-center">
-
         <div className="w-full max-w-md">
-
           <div className="overflow-hidden rounded-3xl border border-gray-200/80 bg-white p-6 text-center shadow-xl shadow-gray-200/50 sm:p-8">
-
-            {/* ==================================
-                LOADING
-            ================================== */}
-
             {loading && (
               <>
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
@@ -126,10 +110,6 @@ export default function VerifyEmailPage() {
                 </p>
               </>
             )}
-
-            {/* ==================================
-                SUCCESS
-            ================================== */}
 
             {!loading && message && (
               <>
@@ -153,10 +133,6 @@ export default function VerifyEmailPage() {
                 </Link>
               </>
             )}
-
-            {/* ==================================
-                ERROR
-            ================================== */}
 
             {!loading && error && (
               <>
@@ -186,17 +162,29 @@ export default function VerifyEmailPage() {
                 </Link>
               </>
             )}
-
           </div>
-
-          {/* Footer */}
 
           <p className="mt-5 text-center text-xs text-gray-400">
             Connect • Share • Grow
           </p>
-
         </div>
       </div>
     </main>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-gray-50">
+          <p className="text-gray-500">
+            Loading...
+          </p>
+        </main>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
