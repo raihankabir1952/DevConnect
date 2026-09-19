@@ -17,15 +17,19 @@ import {
   FileInterceptor,
 } from '@nestjs/platform-express';
 
-import { diskStorage } from 'multer';
-
-import { extname } from 'path';
+import {
+  memoryStorage,
+} from 'multer';
 
 import { UsersService } from './users.service';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import {
+  JwtAuthGuard,
+} from '../auth/guards/jwt-auth.guard';
 
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import {
+  UpdateProfileDto,
+} from './dto/update-profile.dto';
 
 @Controller('users')
 export class UsersController {
@@ -74,28 +78,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination:
-          './uploads/profile-images',
+      // ======================================
+      // STORE FILE IN MEMORY
+      // ======================================
 
-        filename: (
-          req,
-          file,
-          callback,
-        ) => {
-          const uniqueName =
-            `${Date.now()}-${Math.round(
-              Math.random() * 1e9,
-            )}${extname(
-              file.originalname,
-            )}`;
-
-          callback(
-            null,
-            uniqueName,
-          );
-        },
-      }),
+      storage: memoryStorage(),
 
       // ======================================
       // FILE FILTER
@@ -165,28 +152,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination:
-          './uploads/cover-images',
+      // ======================================
+      // STORE FILE IN MEMORY
+      // ======================================
 
-        filename: (
-          req,
-          file,
-          callback,
-        ) => {
-          const uniqueName =
-            `${Date.now()}-${Math.round(
-              Math.random() * 1e9,
-            )}${extname(
-              file.originalname,
-            )}`;
-
-          callback(
-            null,
-            uniqueName,
-          );
-        },
-      }),
+      storage: memoryStorage(),
 
       // ======================================
       // FILE FILTER

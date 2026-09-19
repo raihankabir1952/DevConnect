@@ -19,18 +19,18 @@ import {
 } from '@nestjs/platform-express';
 
 import {
-  diskStorage,
+  memoryStorage,
 } from 'multer';
-
-import {
-  extname,
-} from 'path';
 
 import { PostsService } from './posts.service';
 
-import { CreatePostDto } from './dto/create-post.dto';
+import {
+  CreatePostDto,
+} from './dto/create-post.dto';
 
-import { UpdatePostDto } from './dto/update-post.dto';
+import {
+  UpdatePostDto,
+} from './dto/update-post.dto';
 
 import {
   JwtAuthGuard,
@@ -51,26 +51,50 @@ export class PostsController {
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination:
-          './uploads/post-images',
+      // ======================================
+      // STORE FILE IN MEMORY
+      // ======================================
 
-        filename: (
-          req,
-          file,
-          callback,
-        ) => {
-          const uniqueName =
-            `${Date.now()}-${Math.round(
-              Math.random() * 1e9,
-            )}${extname(file.originalname)}`;
+      storage: memoryStorage(),
 
-          callback(
-            null,
-            uniqueName,
+      // ======================================
+      // FILE FILTER
+      // Only image files allowed
+      // ======================================
+
+      fileFilter: (
+        req,
+        file,
+        callback,
+      ) => {
+        if (
+          !file.mimetype.startsWith(
+            'image/',
+          )
+        ) {
+          return callback(
+            new Error(
+              'Only image files are allowed',
+            ),
+            false,
           );
-        },
-      }),
+        }
+
+        callback(
+          null,
+          true,
+        );
+      },
+
+      // ======================================
+      // FILE SIZE LIMIT
+      // Maximum 5 MB
+      // ======================================
+
+      limits: {
+        fileSize:
+          5 * 1024 * 1024,
+      },
     }),
   )
   create(

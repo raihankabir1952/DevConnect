@@ -6,8 +6,17 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 
-import { CreatePostDto } from './dto/create-post.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
+import {
+  CreatePostDto,
+} from './dto/create-post.dto';
+
+import {
+  UpdatePostDto,
+} from './dto/update-post.dto';
+
+import {
+  uploadToCloudinary,
+} from '../config/cloudinary-upload';
 
 @Injectable()
 export class PostsService {
@@ -26,12 +35,21 @@ export class PostsService {
     file?: Express.Multer.File,
   ) {
     // ========================================
-    // CREATE IMAGE URL
+    // CLOUDINARY IMAGE URL
     // ========================================
 
-    const imageUrl = file
-      ? `/uploads/post-images/${file.filename}`
-      : null;
+    let imageUrl: string | null = null;
+
+    if (file) {
+      const result =
+        await uploadToCloudinary(
+          file,
+          'devconnect/post-images',
+        );
+
+      imageUrl =
+        result.secure_url;
+    }
 
     // ========================================
     // CREATE POST
@@ -59,8 +77,6 @@ export class PostsService {
               id: true,
               name: true,
               email: true,
-
-              // Profile Image
               profileImage: true,
             },
           },
@@ -85,40 +101,20 @@ export class PostsService {
     page = 1,
     limit = 10,
   ) {
-    // ========================================
-    // PREVENT INVALID PAGE
-    // ========================================
-
     if (page < 1) {
       page = 1;
     }
-
-    // ========================================
-    // PREVENT INVALID LIMIT
-    // ========================================
 
     if (limit < 1) {
       limit = 10;
     }
 
-    // ========================================
-    // PREVENT VERY LARGE REQUESTS
-    // ========================================
-
     if (limit > 100) {
       limit = 100;
     }
 
-    // ========================================
-    // CALCULATE SKIP
-    // ========================================
-
     const skip =
       (page - 1) * limit;
-
-    // ========================================
-    // SEARCH CONDITION
-    // ========================================
 
     const where = search
       ? {
@@ -144,10 +140,6 @@ export class PostsService {
         }
       : undefined;
 
-    // ========================================
-    // GET POSTS + TOTAL COUNT
-    // ========================================
-
     const [
       posts,
       totalPosts,
@@ -164,23 +156,13 @@ export class PostsService {
         },
 
         include: {
-          // ==================================
-          // POST AUTHOR
-          // ==================================
-
           author: {
             select: {
               id: true,
               name: true,
-
-              // Profile Image
               profileImage: true,
             },
           },
-
-          // ==================================
-          // POST COUNTS
-          // ==================================
 
           _count: {
             select: {
@@ -191,27 +173,15 @@ export class PostsService {
         },
       }),
 
-      // ======================================
-      // TOTAL POSTS
-      // ======================================
-
       this.prisma.post.count({
         where,
       }),
     ]);
 
-    // ========================================
-    // TOTAL PAGES
-    // ========================================
-
     const totalPages =
       Math.ceil(
         totalPosts / limit,
       );
-
-    // ========================================
-    // RETURN RESPONSE
-    // ========================================
 
     return {
       data: posts,
@@ -248,24 +218,14 @@ export class PostsService {
         },
 
         include: {
-          // ==================================
-          // POST AUTHOR
-          // ==================================
-
           author: {
             select: {
               id: true,
               name: true,
               email: true,
-
-              // Profile Image
               profileImage: true,
             },
           },
-
-          // ==================================
-          // COMMENTS
-          // ==================================
 
           comments: {
             include: {
@@ -273,8 +233,6 @@ export class PostsService {
                 select: {
                   id: true,
                   name: true,
-
-                  // Profile Image
                   profileImage: true,
                 },
               },
@@ -285,10 +243,6 @@ export class PostsService {
             },
           },
 
-          // ==================================
-          // POST COUNTS
-          // ==================================
-
           _count: {
             select: {
               comments: true,
@@ -297,10 +251,6 @@ export class PostsService {
           },
         },
       });
-
-    // ========================================
-    // CHECK POST
-    // ========================================
 
     if (!post) {
       throw new NotFoundException(
@@ -320,10 +270,6 @@ export class PostsService {
     updatePostDto: UpdatePostDto,
     userId: number,
   ) {
-    // ========================================
-    // FIND POST
-    // ========================================
-
     const post =
       await this.prisma.post.findUnique({
         where: {
@@ -331,19 +277,11 @@ export class PostsService {
         },
       });
 
-    // ========================================
-    // CHECK POST
-    // ========================================
-
     if (!post) {
       throw new NotFoundException(
         'Post not found',
       );
     }
-
-    // ========================================
-    // CHECK OWNERSHIP
-    // ========================================
 
     if (
       post.authorId !== userId
@@ -352,10 +290,6 @@ export class PostsService {
         'You can only update your own post',
       );
     }
-
-    // ========================================
-    // UPDATE POST
-    // ========================================
 
     const updatedPost =
       await this.prisma.post.update({
@@ -376,8 +310,6 @@ export class PostsService {
             select: {
               id: true,
               name: true,
-
-              // Profile Image
               profileImage: true,
             },
           },
@@ -401,10 +333,6 @@ export class PostsService {
     id: number,
     userId: number,
   ) {
-    // ========================================
-    // FIND POST
-    // ========================================
-
     const post =
       await this.prisma.post.findUnique({
         where: {
@@ -412,19 +340,11 @@ export class PostsService {
         },
       });
 
-    // ========================================
-    // CHECK POST
-    // ========================================
-
     if (!post) {
       throw new NotFoundException(
         'Post not found',
       );
     }
-
-    // ========================================
-    // CHECK OWNERSHIP
-    // ========================================
 
     if (
       post.authorId !== userId
@@ -433,10 +353,6 @@ export class PostsService {
         'You can only delete your own post',
       );
     }
-
-    // ========================================
-    // DELETE POST
-    // ========================================
 
     await this.prisma.post.delete({
       where: {

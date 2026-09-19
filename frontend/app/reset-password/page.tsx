@@ -8,6 +8,10 @@ import {
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 export default function ResetPasswordPage() {
   const searchParams =
     useSearchParams();
@@ -66,7 +70,7 @@ export default function ResetPasswordPage() {
 
     try {
       const response = await fetch(
-        'http://localhost:3000/auth/reset-password',
+        `${API_URL}/auth/reset-password`,
         {
           method: 'POST',
 

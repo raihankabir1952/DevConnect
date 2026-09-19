@@ -9,6 +9,11 @@ import {
 
 import CommentSection from './CommentSection';
 
+import { getImageUrl } from '@/lib/api';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 interface Post {
   id: number;
   title: string;
@@ -141,7 +146,7 @@ export default function PostCard({
 
       try {
         const response = await fetch(
-          `http://localhost:3000/posts/${post.id}/like-status`,
+          `${API_URL}/posts/${post.id}/like-status`,
           {
             method: 'GET',
 
@@ -209,7 +214,7 @@ export default function PostCard({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/posts/${post.id}/like`,
+        `${API_URL}/posts/${post.id}/like`,
         {
           method: 'POST',
 
@@ -282,7 +287,7 @@ export default function PostCard({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/posts/${post.id}`,
+        `${API_URL}/posts/${post.id}`,
         {
           method: 'PATCH',
 
@@ -352,7 +357,7 @@ export default function PostCard({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/posts/${post.id}`,
+        `${API_URL}/posts/${post.id}`,
         {
           method: 'DELETE',
 
@@ -412,7 +417,7 @@ export default function PostCard({
             >
               {post.author.profileImage ? (
                 <img
-                  src={`http://localhost:3000${post.author.profileImage}`}
+                  src={getImageUrl(post.author.profileImage)}
                   alt={post.author.name}
                   className="h-full w-full object-cover"
                 />
@@ -547,7 +552,7 @@ export default function PostCard({
           {post.image && (
             <div className="mt-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
               <img
-                src={`http://localhost:3000${post.image}`}
+                src={getImageUrl(post.image)}
                 alt={post.title}
                 className="max-h-[520px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
               />

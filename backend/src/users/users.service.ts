@@ -8,6 +8,10 @@ import { PrismaService } from '../prisma/prisma.service';
 
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
+import {
+  uploadToCloudinary,
+} from '../config/cloudinary-upload';
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -183,11 +187,21 @@ export class UsersService {
     }
 
     // ========================================
-    // CREATE IMAGE URL
+    // UPLOAD TO CLOUDINARY
+    // ========================================
+
+    const result =
+      await uploadToCloudinary(
+        file,
+        'devconnect/profile-images',
+      );
+
+    // ========================================
+    // CLOUDINARY IMAGE URL
     // ========================================
 
     const imageUrl =
-      `/uploads/profile-images/${file.filename}`;
+      result.secure_url;
 
     // ========================================
     // UPDATE USER
@@ -236,11 +250,21 @@ export class UsersService {
     }
 
     // ========================================
-    // CREATE COVER IMAGE URL
+    // UPLOAD TO CLOUDINARY
+    // ========================================
+
+    const result =
+      await uploadToCloudinary(
+        file,
+        'devconnect/cover-images',
+      );
+
+    // ========================================
+    // CLOUDINARY IMAGE URL
     // ========================================
 
     const imageUrl =
-      `/uploads/cover-images/${file.filename}`;
+      result.secure_url;
 
     // ========================================
     // UPDATE USER

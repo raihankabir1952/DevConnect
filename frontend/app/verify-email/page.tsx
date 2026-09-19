@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 export default function VerifyEmailPage() {
   const searchParams =
     useSearchParams();
@@ -33,7 +37,7 @@ export default function VerifyEmailPage() {
 
       try {
         const response = await fetch(
-          `http://localhost:3000/auth/verify-email?token=${encodeURIComponent(
+          `${API_URL}/auth/verify-email?token=${encodeURIComponent(
             token,
           )}`,
         );

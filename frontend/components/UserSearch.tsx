@@ -8,6 +8,10 @@ interface User {
   name: string;
 }
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 export default function UserSearch() {
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -32,7 +36,7 @@ export default function UserSearch() {
         setLoading(true);
 
         const response = await fetch(
-          `http://localhost:3000/users?search=${encodeURIComponent(
+          `${API_URL}/users?search=${encodeURIComponent(
             search,
           )}`,
         );

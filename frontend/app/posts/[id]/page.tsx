@@ -6,6 +6,10 @@ import { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import CommentSection from '@/components/CommentSection';
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 interface Post {
   id: number;
   title: string;
@@ -48,7 +52,7 @@ export default function PostDetailsPage({
         const { id } = await params;
 
         const response = await fetch(
-          `http://localhost:3000/posts/${id}`,
+          `${API_URL}/posts/${id}`,
         );
 
         if (!response.ok) {

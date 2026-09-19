@@ -10,6 +10,10 @@ interface CreatePostProps {
   onPostCreated: () => void;
 }
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 export default function CreatePost({
   onPostCreated,
 }: CreatePostProps) {
@@ -140,7 +144,7 @@ export default function CreatePost({
 
       const response =
         await fetch(
-          'http://localhost:3000/posts',
+          `${API_URL}/posts`,
           {
             method: 'POST',
 

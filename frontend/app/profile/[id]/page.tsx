@@ -11,6 +11,11 @@ import {
 } from 'react';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { getImageUrl } from '@/lib/api';
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
 
 interface User {
   id: number;
@@ -172,26 +177,6 @@ function ProfilePageContent() {
     }
   }, []);
 
-  // ==========================================
-  // IMAGE URL HELPER
-  // ==========================================
-
-  function getImageUrl(
-    image?: string | null,
-  ) {
-    if (!image) {
-      return null;
-    }
-
-    if (
-      image.startsWith('http://') ||
-      image.startsWith('https://')
-    ) {
-      return image;
-    }
-
-    return `http://localhost:3000${image}`;
-  }
 
   // ==========================================
   // FETCH PROFILE
@@ -213,7 +198,7 @@ function ProfilePageContent() {
 
         const userResponse =
           await fetch(
-            `http://localhost:3000/users/${userId}`,
+            `${API_URL}/users/${userId}`,
           );
 
         const userData =
@@ -280,7 +265,7 @@ function ProfilePageContent() {
 
         const postsResponse =
           await fetch(
-            'http://localhost:3000/posts',
+            `${API_URL}/posts`,
           );
 
         const postsData =
@@ -409,7 +394,7 @@ function ProfilePageContent() {
     try {
       const response =
         await fetch(
-          'http://localhost:3000/users/profile',
+          `${API_URL}/users/profile`,
           {
             method: 'PATCH',
 
@@ -552,7 +537,7 @@ function ProfilePageContent() {
 
       const response =
         await fetch(
-          'http://localhost:3000/users/profile-image',
+          `${API_URL}/users/profile-image`,
           {
             method: 'PATCH',
 
@@ -693,7 +678,7 @@ function ProfilePageContent() {
 
       const response =
         await fetch(
-          'http://localhost:3000/users/cover-image',
+          `${API_URL}/users/cover-image`,
           {
             method: 'PATCH',
 
@@ -779,7 +764,7 @@ function ProfilePageContent() {
     try {
       const response =
         await fetch(
-          `http://localhost:3000/users/${userId}/follow`,
+          `${API_URL}/users/${userId}/follow`,
           {
             method: 'POST',
 
@@ -862,7 +847,7 @@ function ProfilePageContent() {
     try {
       const response =
         await fetch(
-          `http://localhost:3000/users/${userId}/follow`,
+          `${API_URL}/users/${userId}/follow`,
           {
             method: 'DELETE',
 

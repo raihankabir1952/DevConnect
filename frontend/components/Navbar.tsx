@@ -15,6 +15,16 @@ import {
 } from "react";
 import { io } from "socket.io-client";
 
+import { getImageUrl } from "@/lib/api";
+
+// ==========================================
+// API URL
+// ==========================================
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:3000";
+
 // ==========================================
 // TYPES
 // ==========================================
@@ -51,27 +61,6 @@ interface Notification {
   createdAt: string;
   actor?: NotificationActor | null;
   post?: NotificationPost | null;
-}
-
-// ==========================================
-// PROFILE IMAGE URL
-// ==========================================
-
-function getProfileImageUrl(
-  profileImage?: string | null,
-) {
-  if (!profileImage) {
-    return null;
-  }
-
-  if (
-    profileImage.startsWith("http://") ||
-    profileImage.startsWith("https://")
-  ) {
-    return profileImage;
-  }
-
-  return `http://localhost:3000${profileImage}`;
 }
 
 // ==========================================
@@ -157,7 +146,7 @@ export default function Navbar() {
       // ======================================
 
       fetch(
-        `http://localhost:3000/users/${parsedUser.id}`,
+        `${API_URL}/users/${parsedUser.id}`,
       )
         .then((response) => {
           if (!response.ok) {
@@ -207,9 +196,7 @@ export default function Navbar() {
     // CREATE SOCKET CONNECTION
     // ========================================
 
-    const socket = io(
-      "http://localhost:3000",
-    );
+    const socket = io(API_URL);
 
     // ========================================
     // SOCKET CONNECTED
@@ -310,7 +297,7 @@ export default function Navbar() {
         try {
           const response =
             await fetch(
-              "http://localhost:3000/notifications",
+              `${API_URL}/notifications`,
               {
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem(
@@ -402,7 +389,7 @@ export default function Navbar() {
         try {
           const response =
             await fetch(
-              `http://localhost:3000/users/search?q=${encodeURIComponent(
+              `${API_URL}/users/search?q=${encodeURIComponent(
                 search,
               )}`,
             );
@@ -440,7 +427,7 @@ export default function Navbar() {
       try {
         const response =
           await fetch(
-            `http://localhost:3000/notifications/${notificationId}/read`,
+            `${API_URL}/notifications/${notificationId}/read`,
             {
               method: "PATCH",
 
@@ -486,7 +473,7 @@ export default function Navbar() {
       try {
         const response =
           await fetch(
-            "http://localhost:3000/notifications/read-all",
+            `${API_URL}/notifications/read-all`,
             {
               method: "PATCH",
 
@@ -525,6 +512,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+
     localStorage.removeItem(
       "accessToken",
     );
@@ -690,14 +678,14 @@ export default function Navbar() {
                       }}
                       className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 hover:bg-gray-50"
                     >
-                      {getProfileImageUrl(
+                      {getImageUrl(
                         user.profileImage,
                       ) ? (
                         <img
                           src={
-                            getProfileImageUrl(
+                            getImageUrl(
                               user.profileImage,
-                            )!
+                            )
                           }
                           alt={user.name}
                           className="h-9 w-9 rounded-full object-cover"
@@ -843,18 +831,18 @@ export default function Navbar() {
 
                             {/* ACTOR IMAGE */}
 
-                            {getProfileImageUrl(
+                            {getImageUrl(
                               notification
                                 .actor
                                 ?.profileImage,
                             ) ? (
                               <img
                                 src={
-                                  getProfileImageUrl(
+                                  getImageUrl(
                                     notification
                                       .actor
                                       ?.profileImage,
-                                  )!
+                                  )
                                 }
                                 alt={
                                   notification
@@ -919,14 +907,14 @@ export default function Navbar() {
               href={`/profile/${currentUser.id}`}
               className="hidden items-center gap-2 md:flex"
             >
-              {getProfileImageUrl(
+              {getImageUrl(
                 currentUser.profileImage,
               ) ? (
                 <img
                   src={
-                    getProfileImageUrl(
+                    getImageUrl(
                       currentUser.profileImage,
-                    )!
+                    )
                   }
                   alt={currentUser.name}
                   className="h-9 w-9 rounded-full object-cover"

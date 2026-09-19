@@ -7,6 +7,10 @@ import {
 
 import Link from 'next/link';
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] =
     useState('');
@@ -31,7 +35,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await fetch(
-        'http://localhost:3000/auth/forgot-password',
+        `${API_URL}/auth/forgot-password`,
         {
           method: 'POST',
 

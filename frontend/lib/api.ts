@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3000';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
 
 export async function apiRequest(
   endpoint: string,
@@ -24,4 +26,27 @@ export async function apiRequest(
   }
 
   return data;
+}
+
+// ==========================================
+// IMAGE URL HELPER
+// ==========================================
+
+export function getImageUrl(
+  image?: string | null,
+) {
+  if (!image) {
+    return '';
+  }
+
+  // Cloudinary / external image
+  if (
+    image.startsWith('http://') ||
+    image.startsWith('https://')
+  ) {
+    return image;
+  }
+
+  // Old local upload path
+  return `${API_URL}${image}`;
 }

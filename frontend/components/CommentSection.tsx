@@ -7,6 +7,12 @@ import {
   useState,
 } from 'react';
 
+import { getImageUrl } from '@/lib/api';
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3000';
+
 interface Comment {
   id: number;
   content: string;
@@ -114,27 +120,6 @@ export default function CommentSection({
   }, []);
 
   // ==========================================
-  // PROFILE IMAGE URL
-  // ==========================================
-
-  function getProfileImageUrl(
-    profileImage?: string | null,
-  ) {
-    if (!profileImage) {
-      return null;
-    }
-
-    if (
-      profileImage.startsWith('http://') ||
-      profileImage.startsWith('https://')
-    ) {
-      return profileImage;
-    }
-
-    return `http://localhost:3000${profileImage}`;
-  }
-
-  // ==========================================
   // FETCH COMMENTS
   // ==========================================
 
@@ -143,7 +128,7 @@ export default function CommentSection({
       setError('');
 
       const response = await fetch(
-        `http://localhost:3000/posts/${postId}`,
+        `${API_URL}/posts/${postId}`,
       );
 
       if (!response.ok) {
@@ -216,7 +201,7 @@ export default function CommentSection({
 
     try {
       const response = await fetch(
-        'http://localhost:3000/comments',
+        `${API_URL}/comments`,
         {
           method: 'POST',
 
@@ -293,7 +278,7 @@ export default function CommentSection({
 
     try {
       const response = await fetch(
-        'http://localhost:3000/comments',
+        `${API_URL}/comments`,
         {
           method: 'POST',
 
@@ -401,7 +386,7 @@ export default function CommentSection({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/comments/${editingCommentId}`,
+        `${API_URL}/comments/${editingCommentId}`,
         {
           method: 'PATCH',
 
@@ -479,7 +464,7 @@ export default function CommentSection({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/comments/${commentId}`,
+        `${API_URL}/comments/${commentId}`,
         {
           method: 'DELETE',
 
@@ -642,7 +627,7 @@ export default function CommentSection({
                   comment.id;
 
                 const commentImage =
-                  getProfileImageUrl(
+                  getImageUrl(
                     comment.user.profileImage,
                   );
 
@@ -892,7 +877,7 @@ export default function CommentSection({
                                       reply.id;
 
                                     const replyImage =
-                                      getProfileImageUrl(
+                                      getImageUrl(
                                         reply.user
                                           .profileImage,
                                       );
