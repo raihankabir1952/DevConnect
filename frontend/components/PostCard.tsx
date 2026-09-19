@@ -395,7 +395,7 @@ export default function PostCard({
       setLoading(false);
     }
   }
-
+console.log('POST CARD:', post);
   return (
     <>
       {/* ================================= */}
