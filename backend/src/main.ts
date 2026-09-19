@@ -51,9 +51,16 @@ async function bootstrap() {
   // ==========================================
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: [
+      'http://localhost:3001',
+      'https://dev-connect-eight-ashy.vercel.app',
+    ],
     credentials: true,
   });
+
+  // ==========================================
+  // START SERVER
+  // ==========================================
 
   await app.listen(3000);
 }
