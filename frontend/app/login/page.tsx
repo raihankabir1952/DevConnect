@@ -14,7 +14,13 @@ export default function LoginPage() {
     useState('');
 
   const [error, setError] = useState('');
+  const [success, setSuccess] =
+    useState('');
+
   const [loading, setLoading] =
+    useState(false);
+
+  const [resending, setResending] =
     useState(false);
 
   async function handleLogin(
@@ -23,6 +29,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
@@ -61,6 +68,50 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+
+  async function handleResendVerification() {
+    if (!email.trim()) {
+      setError(
+        'Please enter your email address first.',
+      );
+
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setResending(true);
+
+    try {
+      const data = await apiRequest(
+        '/auth/resend-verification',
+        {
+          method: 'POST',
+
+          body: JSON.stringify({
+            email: email.trim(),
+          }),
+        },
+      );
+
+      setSuccess(
+        data.message ||
+          'Verification email sent successfully.',
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to resend verification email',
+      );
+    } finally {
+      setResending(false);
+    }
+  }
+
+  const needsVerification =
+    error ===
+    'Please verify your email before logging in';
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4 py-8">
@@ -119,10 +170,43 @@ export default function LoginPage() {
             {/* Error */}
 
             {error && (
-              <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-                <span>⚠️</span>
+              <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
 
-                <p>{error}</p>
+                <div className="flex items-start gap-2">
+                  <span>⚠️</span>
+
+                  <p>{error}</p>
+                </div>
+
+                {/* Resend Verification */}
+
+                {needsVerification && (
+                  <button
+                    type="button"
+                    onClick={
+                      handleResendVerification
+                    }
+                    disabled={resending}
+                    className="mt-3 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {resending
+                      ? 'Sending verification email...'
+                      : 'Resend Verification Email'}
+                  </button>
+                )}
+
+              </div>
+            )}
+
+            {/* Success */}
+
+            {success && (
+              <div className="mb-5 rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                <div className="flex items-start gap-2">
+                  <span>✅</span>
+
+                  <p>{success}</p>
+                </div>
               </div>
             )}
 
@@ -147,11 +231,11 @@ export default function LoginPage() {
                   id="login-email"
                   type="email"
                   value={email}
-                  onChange={(e) =>
-                    setEmail(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError('');
+                    setSuccess('');
+                  }}
                   placeholder="Enter your email"
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                   required
@@ -183,11 +267,11 @@ export default function LoginPage() {
                   id="login-password"
                   type="password"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError('');
+                    setSuccess('');
+                  }}
                   placeholder="Enter your password"
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                   required
