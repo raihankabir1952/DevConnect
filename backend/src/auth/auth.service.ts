@@ -4,6 +4,7 @@ import {
 } from 'crypto';
 
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -143,6 +144,68 @@ export class AuthService {
     return {
       message:
         'Email verified successfully',
+    };
+  }
+
+  // ==========================================
+  // RESEND VERIFICATION EMAIL
+  // ==========================================
+
+  async resendVerificationEmail(
+    email: string,
+  ) {
+    const user =
+      await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+    if (!user) {
+      throw new UnauthorizedException(
+        'User not found',
+      );
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException(
+        'Email is already verified',
+      );
+    }
+
+    const verificationToken =
+      randomBytes(32).toString('hex');
+
+    const verificationTokenHash =
+      createHash('sha256')
+        .update(verificationToken)
+        .digest('hex');
+
+    const verificationExpiresAt =
+      new Date(
+        Date.now() +
+          24 * 60 * 60 * 1000,
+      );
+
+    await this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        emailVerificationTokenHash:
+          verificationTokenHash,
+        emailVerificationExpiresAt:
+          verificationExpiresAt,
+      },
+    });
+
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      user.name,
+      verificationToken,
+    );
+
+    return {
+      message:
+        'Verification email sent successfully',
     };
   }
 

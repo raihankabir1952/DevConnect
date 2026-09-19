@@ -17,7 +17,9 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
+  // ==========================================
   // LOGIN
+  // ==========================================
 
   @Post('login')
   login(
@@ -28,7 +30,9 @@ export class AuthController {
     );
   }
 
+  // ==========================================
   // REGISTER
+  // ==========================================
 
   @Post('register')
   register(
@@ -39,7 +43,9 @@ export class AuthController {
     );
   }
 
+  // ==========================================
   // VERIFY EMAIL
+  // ==========================================
 
   @Get('verify-email')
   verifyEmail(
@@ -50,7 +56,22 @@ export class AuthController {
     );
   }
 
+  // ==========================================
+  // RESEND VERIFICATION EMAIL
+  // ==========================================
+
+  @Post('resend-verification')
+  resendVerificationEmail(
+    @Body('email') email: string,
+  ) {
+    return this.authService.resendVerificationEmail(
+      email,
+    );
+  }
+
+  // ==========================================
   // FORGOT PASSWORD
+  // ==========================================
 
   @Post('forgot-password')
   forgotPassword(
@@ -66,7 +87,9 @@ export class AuthController {
     );
   }
 
+  // ==========================================
   // RESET PASSWORD
+  // ==========================================
 
   @Post('reset-password')
   resetPassword(
